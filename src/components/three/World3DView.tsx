@@ -20,6 +20,7 @@ type World3DViewProps = {
   onPlaceFurniture?: (type: FurnitureType, x: number, y: number) => void;
   onPlaceSteelBar?: (x1: number, y1: number, x2: number, y2: number) => void;
   onPlaceRoof?: (x: number, y: number, width: number, height: number) => void;
+  onPaint?: (kind: "wall" | "foundation", id: string) => void;
   onViewModeChange?: (fp: boolean) => void;
 };
 
@@ -36,6 +37,7 @@ export function World3DView({
   onPlaceFurniture,
   onPlaceSteelBar,
   onPlaceRoof,
+  onPaint,
   onViewModeChange,
 }: World3DViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -75,6 +77,7 @@ export function World3DView({
       onPlaceFurniture,
       onPlaceSteelBar,
       onPlaceRoof,
+      onPaint,
     });
   }, [
     currentTool,
@@ -86,6 +89,7 @@ export function World3DView({
     onPlaceFurniture,
     onPlaceSteelBar,
     onPlaceRoof,
+    onPaint,
     onSelectionChange,
   ]);
 

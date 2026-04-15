@@ -37,6 +37,11 @@ const DIALOGUE_LINES: DialogueLine[] = [
     check: (_w, t) => t === "furniture",
   },
   {
+    id: "paint-active",
+    text: "Click on any wall or the floor to paint it! Pick your color from the palette.",
+    check: (_w, t) => t === "paint",
+  },
+  {
     id: "furniture-hint",
     text: "The rooms look empty… Switch to Furniture and make this place feel like home!",
     check: (w) => w.roofs.length > 0 && w.furniture.length === 0,

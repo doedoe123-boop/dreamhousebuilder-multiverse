@@ -31,6 +31,7 @@ export type Object3D = {
   position: Vector3;
   dimensions: Dimensions3D;
   rotation?: number;
+  floor?: number;
 };
 
 export type Door3D = {
@@ -38,6 +39,7 @@ export type Door3D = {
   wallId: string;
   position: Vector3;
   dimensions: Dimensions3D;
+  floor?: number;
 };
 
 export type Window3D = {
@@ -45,6 +47,7 @@ export type Window3D = {
   wallId: string;
   position: Vector3;
   dimensions: Dimensions3D;
+  floor?: number;
 };
 
 export type SteelBar3D = {
@@ -52,6 +55,7 @@ export type SteelBar3D = {
   start: Vector3;
   end: Vector3;
   diameter: number;
+  floor?: number;
 };
 
 export type Roof3D = {
@@ -62,6 +66,7 @@ export type Roof3D = {
   style: RoofStyle;
   overhang: number;
   pitch: number;
+  floor?: number;
 };
 
 export type Scene3D = {

@@ -44,6 +44,7 @@ export type World3DRendererOptions = {
   onPlaceFurniture?: (type: FurnitureType, x: number, y: number) => void;
   onPlaceSteelBar?: (x1: number, y1: number, x2: number, y2: number) => void;
   onPlaceRoof?: (x: number, y: number, width: number, height: number) => void;
+  onPaint?: (kind: "wall" | "foundation", id: string) => void;
 };
 
 export function createWorld3DRenderer(
@@ -193,6 +194,7 @@ export function createWorld3DRenderer(
   let onPlaceFurniture = options.onPlaceFurniture;
   let onPlaceSteelBar = options.onPlaceSteelBar;
   let onPlaceRoof = options.onPlaceRoof;
+  let onPaint = options.onPaint;
 
   let foundationBounds = { minX: 0, maxX: 0, minZ: 0, maxZ: 0 };
   let pointerDownPosition: { x: number; y: number } | null = null;
@@ -741,6 +743,17 @@ export function createWorld3DRenderer(
       else onPlaceWindow?.(data.id, wallHit.point.x, wallHit.point.z);
       return;
     }
+    if (currentTool === "paint") {
+      const mesh = getIntersectedSelectableMesh(event);
+      if (!mesh) return;
+      const data = mesh.userData as SelectableUserData;
+      if (data.kind === "wall" && data.id) {
+        onPaint?.("wall", data.id);
+      } else if (data.kind === "foundation" && data.id) {
+        onPaint?.("foundation", data.id);
+      }
+      return;
+    }
 
     // Select tool
     const mesh = getIntersectedSelectableMesh(event);
@@ -794,6 +807,7 @@ export function createWorld3DRenderer(
       tool === "window"
     )
       return "cell";
+    if (tool === "paint") return "crosshair";
     return "grab";
   };
 
@@ -809,6 +823,7 @@ export function createWorld3DRenderer(
       onPlaceFurniture = nextOptions.onPlaceFurniture;
       onPlaceSteelBar = nextOptions.onPlaceSteelBar;
       onPlaceRoof = nextOptions.onPlaceRoof;
+      onPaint = nextOptions.onPaint;
       const nextTool = nextOptions.currentTool ?? currentTool;
       currentFurnitureType =
         nextOptions.currentFurnitureType ?? currentFurnitureType;

@@ -6,6 +6,7 @@ import {
   DEFAULT_ROOF_THICKNESS_PX,
   DEFAULT_STEELBAR_HEIGHT_PX,
   DEFAULT_WALL_HEIGHT_PX,
+  FLOOR_HEIGHT_PX,
 } from "../constants/scene3d";
 import type { World } from "../types/world";
 import { snap } from "../utils/editor";
@@ -24,6 +25,8 @@ export function buildWorldMeshes(
   world: World,
 ): FoundationBounds {
   const scene3d = exportWorldTo3D(world);
+  const floorY = (floor: number) =>
+    toSceneUnits((floor || 0) * FLOOR_HEIGHT_PX);
 
   const foundationBounds: FoundationBounds = {
     minX: toSceneUnits(world.foundation.x),
@@ -39,7 +42,7 @@ export function buildWorldMeshes(
     scene3d.foundation.depth,
   );
   const foundationMaterial = new THREE.MeshStandardMaterial({
-    color: "#cab89b",
+    color: world.foundation.color || "#cab89b",
   });
   const foundationMesh = new THREE.Mesh(foundationGeometry, foundationMaterial);
   foundationMesh.position.set(
@@ -47,8 +50,43 @@ export function buildWorldMeshes(
     scene3d.foundation.position.y - scene3d.foundation.thickness / 2,
     scene3d.foundation.position.z,
   );
-  foundationMesh.userData = { foundation: true };
+  foundationMesh.userData = {
+    foundation: true,
+    selectable: true,
+    kind: "foundation",
+    id: "foundation",
+  } satisfies SelectableUserData & { foundation: true };
   worldRoot.add(foundationMesh);
+
+  // ── Upper floor slabs ──
+  const usedFloors = new Set<number>();
+  world.walls.forEach((w) => w.floor && usedFloors.add(w.floor));
+  world.pillars.forEach((p) => p.floor && usedFloors.add(p.floor));
+  world.furniture.forEach((f) => f.floor && usedFloors.add(f.floor));
+  (world.doors ?? []).forEach((d) => d.floor && usedFloors.add(d.floor));
+  (world.windows ?? []).forEach((w) => w.floor && usedFloors.add(w.floor));
+  (world.steelBars ?? []).forEach((s) => s.floor && usedFloors.add(s.floor));
+  (world.roofs ?? []).forEach((r) => r.floor && usedFloors.add(r.floor));
+
+  usedFloors.forEach((floor) => {
+    if (floor <= 0) return;
+    const slabGeo = new THREE.BoxGeometry(
+      scene3d.foundation.width,
+      scene3d.foundation.thickness,
+      scene3d.foundation.depth,
+    );
+    const slabMat = new THREE.MeshStandardMaterial({
+      color: "#d4caba",
+    });
+    const slab = new THREE.Mesh(slabGeo, slabMat);
+    const fy = floorY(floor);
+    slab.position.set(
+      scene3d.foundation.position.x,
+      fy - scene3d.foundation.thickness / 2,
+      scene3d.foundation.position.z,
+    );
+    worldRoot.add(slab);
+  });
 
   // ── Grid ──
   buildGrid(worldRoot, foundationBounds, world);
@@ -60,8 +98,11 @@ export function buildWorldMeshes(
       wall.dimensions.height,
       wall.dimensions.depth,
     );
+    const wallColor =
+      world.walls[index]?.color ||
+      STRUCTURAL_MATERIAL_COLORS[world.walls[index]?.material ?? "wood"];
     const material = new THREE.MeshStandardMaterial({
-      color: STRUCTURAL_MATERIAL_COLORS[world.walls[index]?.material ?? "wood"],
+      color: wallColor,
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.userData = {
@@ -69,7 +110,8 @@ export function buildWorldMeshes(
       kind: "wall",
       id: wall.id,
     } satisfies SelectableUserData;
-    mesh.position.set(wall.position.x, wall.position.y, wall.position.z);
+    const fy = floorY(world.walls[index]?.floor ?? 0);
+    mesh.position.set(wall.position.x, wall.position.y + fy, wall.position.z);
     worldRoot.add(mesh);
   });
 
@@ -111,9 +153,10 @@ export function buildWorldMeshes(
       id: pillar.id,
       highlightMesh: mesh,
     } satisfies SelectableUserData;
+    const fy = floorY(pillar.floor ?? 0);
     mesh.position.set(
       toSceneUnits(pillar.x + pillar.size / 2),
-      pillarHeight / 2,
+      pillarHeight / 2 + fy,
       toSceneUnits(pillar.y + pillar.size / 2),
     );
     hitbox.position.copy(mesh.position);
@@ -142,12 +185,13 @@ export function buildWorldMeshes(
       kind: "furniture",
       id: object.id,
     } satisfies SelectableUserData;
+    const fy = floorY(object.floor ?? 0);
     mesh.position.set(
       object.position.x,
       Math.max(
         object.position.y,
         toSceneUnits(DEFAULT_FURNITURE_HEIGHT_PX) / 2,
-      ),
+      ) + fy,
       object.position.z,
     );
     mesh.rotation.y = object.rotation ?? 0;
@@ -187,7 +231,8 @@ export function buildWorldMeshes(
       kind: "steelbar",
       id: bar.id,
     } satisfies SelectableUserData;
-    mesh.position.set((sx + ex) / 2, barHeight / 2, (sy + ey) / 2);
+    const fy = floorY(bar.floor ?? 0);
+    mesh.position.set((sx + ex) / 2, barHeight / 2 + fy, (sy + ey) / 2);
     mesh.rotation.y = -Math.atan2(dz, dx);
     if (horizontalLen > 0.01) {
       mesh.rotation.z = Math.atan2(barHeight, horizontalLen) - Math.PI / 2;
@@ -338,6 +383,8 @@ function buildGrid(
 import type { Door3D } from "../types/scene3d";
 
 function buildDoors(worldRoot: THREE.Group, doors: Door3D[]) {
+  const floorYOffset = (floor: number) =>
+    toSceneUnits((floor || 0) * FLOOR_HEIGHT_PX);
   doors.forEach((door) => {
     const doorGroup = new THREE.Group();
     doorGroup.userData = {
@@ -407,7 +454,12 @@ function buildDoors(worldRoot: THREE.Group, doors: Door3D[]) {
       if (child instanceof THREE.Mesh) child.userData = tagData;
     });
 
-    doorGroup.position.set(door.position.x, door.position.y, door.position.z);
+    const fy = floorYOffset(door.floor ?? 0);
+    doorGroup.position.set(
+      door.position.x,
+      door.position.y + fy,
+      door.position.z,
+    );
     worldRoot.add(doorGroup);
   });
 }
@@ -419,6 +471,8 @@ function buildDoors(worldRoot: THREE.Group, doors: Door3D[]) {
 import type { Window3D } from "../types/scene3d";
 
 function buildWindows(worldRoot: THREE.Group, windows: Window3D[]) {
+  const floorYOffset = (floor: number) =>
+    toSceneUnits((floor || 0) * FLOOR_HEIGHT_PX);
   windows.forEach((win) => {
     const winGroup = new THREE.Group();
     winGroup.userData = {
@@ -485,7 +539,8 @@ function buildWindows(worldRoot: THREE.Group, windows: Window3D[]) {
       if (child instanceof THREE.Mesh) child.userData = tagData;
     });
 
-    winGroup.position.set(win.position.x, win.position.y, win.position.z);
+    const fy = floorYOffset(win.floor ?? 0);
+    winGroup.position.set(win.position.x, win.position.y + fy, win.position.z);
     worldRoot.add(winGroup);
   });
 }
@@ -499,9 +554,12 @@ import type { Roof3D } from "../types/scene3d";
 function buildRoofs(worldRoot: THREE.Group, roofs: Roof3D[]) {
   const roofThick = toSceneUnits(DEFAULT_ROOF_THICKNESS_PX);
   const wallH = toSceneUnits(DEFAULT_WALL_HEIGHT_PX);
+  const floorYOffset = (floor: number) =>
+    toSceneUnits((floor || 0) * FLOOR_HEIGHT_PX);
 
   roofs.forEach((roof) => {
     const roofGroup = new THREE.Group();
+    const fy = floorYOffset(roof.floor ?? 0);
 
     if (roof.style === "flat") {
       const geo = new THREE.BoxGeometry(roof.width, roofThick, roof.depth);
@@ -521,7 +579,7 @@ function buildRoofs(worldRoot: THREE.Group, roofs: Roof3D[]) {
       buildHipRoof(roofGroup, roof, wallH);
     }
 
-    roofGroup.position.set(roof.position.x, 0, roof.position.z);
+    roofGroup.position.set(roof.position.x, fy, roof.position.z);
     worldRoot.add(roofGroup);
   });
 }

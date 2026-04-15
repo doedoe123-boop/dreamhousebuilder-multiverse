@@ -511,6 +511,37 @@
   display: block;
 }
 
+/* Paint tool color swatches */
+.floating-toolbar__group--paint {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.floating-tool--swatch {
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolbar__swatch--lg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Fullscreen first-person mode */
+.stage-shell.is-firstperson {
+  padding: 0;
+  min-height: 100vh;
+}
+
+.stage-shell.is-firstperson .view3d-shell {
+  border-radius: 0;
+  box-shadow: none;
+  min-height: 100vh;
+}
+
 /* Floating hint when UI is hidden */
 .floating-hint {
   position: absolute;

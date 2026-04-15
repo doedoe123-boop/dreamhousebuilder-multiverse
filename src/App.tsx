@@ -27,6 +27,7 @@ import type {
 import { createId, snap } from "./utils/editor";
 import { normalizeWorld } from "./utils/world";
 import { getActiveDialogue } from "./utils/dialogue";
+import { PAINT_COLORS } from "./constants/paint";
 
 const MAX_UNDO_HISTORY = 50;
 
@@ -70,6 +71,10 @@ function App() {
     useState<FurnitureType>("bed");
   const [uiVisible, setUiVisible] = useState(true);
   const [isFirstPerson, setIsFirstPerson] = useState(false);
+  const [currentPaintColor, setCurrentPaintColor] = useState(
+    PAINT_COLORS[0].value,
+  );
+  const [currentFloor, setCurrentFloor] = useState(0);
   const [statusMessage, setStatusMessage] = useState(
     "Welcome! Use WASD to walk. Press V for first-person view. H to toggle UI.",
   );
@@ -86,6 +91,7 @@ function App() {
       steelbar:
         "Steel Bar tool. Click to set start, click again to finish the bar.",
       roof: "Roof tool. Click to set first corner, click again for opposite corner.",
+      paint: "Paint tool. Click a wall or floor to paint it.",
     }),
     [currentMaterial, currentFurnitureType],
   );
@@ -129,13 +135,14 @@ function App() {
             y,
             size: DEFAULT_PILLAR_SIZE,
             material: currentMaterial,
+            floor: currentFloor,
           },
         ],
       }));
       setSelectedObject(null);
       setStatusMessage(`Placed ${currentMaterial} pillar.`);
     },
-    [currentMaterial, updateWorld],
+    [currentMaterial, currentFloor, updateWorld],
   );
 
   const placeWall = useCallback(
@@ -153,13 +160,14 @@ function App() {
             y2,
             thickness: DEFAULT_WALL_THICKNESS,
             material: currentMaterial,
+            floor: currentFloor,
           },
         ],
       }));
       setSelectedObject(null);
       setStatusMessage(`Wall placed. Click to start another or switch tools.`);
     },
-    [currentMaterial, updateWorld],
+    [currentMaterial, currentFloor, updateWorld],
   );
 
   const placeDoor = useCallback(
@@ -192,13 +200,19 @@ function App() {
           ...w,
           doors: [
             ...w.doors,
-            { id: doorId, wallId, t, width: DEFAULT_DOOR_WIDTH },
+            {
+              id: doorId,
+              wallId,
+              t,
+              width: DEFAULT_DOOR_WIDTH,
+              floor: currentFloor,
+            },
           ],
         };
       });
       setStatusMessage("Door placed on wall.");
     },
-    [updateWorld],
+    [currentFloor, updateWorld],
   );
 
   const placeWindow = useCallback(
@@ -235,13 +249,14 @@ function App() {
               t,
               width: DEFAULT_WINDOW_WIDTH,
               height: DEFAULT_WINDOW_HEIGHT,
+              floor: currentFloor,
             },
           ],
         };
       });
       setStatusMessage("Window placed on wall.");
     },
-    [updateWorld],
+    [currentFloor, updateWorld],
   );
 
   const placeFurniture = useCallback(
@@ -259,13 +274,14 @@ function App() {
             y: snap(y - catalog.defaultHeight / 2),
             width: catalog.defaultWidth,
             height: catalog.defaultHeight,
+            floor: currentFloor,
           },
         ],
       }));
       setSelectedObject(null);
       setStatusMessage(`Placed ${catalog.label}.`);
     },
-    [updateWorld],
+    [currentFloor, updateWorld],
   );
 
   const placeSteelBar = useCallback(
@@ -282,13 +298,14 @@ function App() {
             x2,
             y2,
             diameter: DEFAULT_STEELBAR_DIAMETER,
+            floor: currentFloor,
           },
         ],
       }));
       setSelectedObject(null);
       setStatusMessage("Steel bar placed. Click to start another.");
     },
-    [updateWorld],
+    [currentFloor, updateWorld],
   );
 
   const placeRoof = useCallback(
@@ -307,13 +324,14 @@ function App() {
             style: "gable",
             overhang: DEFAULT_ROOF_OVERHANG,
             pitch: DEFAULT_ROOF_PITCH,
+            floor: currentFloor,
           },
         ],
       }));
       setSelectedObject(null);
       setStatusMessage("Roof placed.");
     },
-    [updateWorld],
+    [currentFloor, updateWorld],
   );
 
   const deleteSelected = useCallback(() => {
@@ -502,7 +520,7 @@ function App() {
         return;
       }
 
-      // Number keys 1-8 to switch tools
+      // Number keys 1-9 to switch tools
       const toolKeys: Record<string, ToolMode> = {
         "1": "select",
         "2": "pillar",
@@ -512,6 +530,7 @@ function App() {
         "6": "steelbar",
         "7": "roof",
         "8": "furniture",
+        "9": "paint",
       };
       if (toolKeys[event.key]) {
         const tool = toolKeys[event.key];
@@ -544,6 +563,18 @@ function App() {
         }
         return;
       }
+
+      // PageUp/PageDown to switch floors
+      if (event.key === "PageUp") {
+        event.preventDefault();
+        setCurrentFloor((f) => Math.min(f + 1, 9));
+        return;
+      }
+      if (event.key === "PageDown") {
+        event.preventDefault();
+        setCurrentFloor((f) => Math.max(f - 1, 0));
+        return;
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -567,6 +598,30 @@ function App() {
     setStatusMessage(toolStatusMessages[tool]);
   };
 
+  const handlePaint = useCallback(
+    (kind: "wall" | "foundation", id: string) => {
+      updateWorld((w) => {
+        if (kind === "wall") {
+          return {
+            ...w,
+            walls: w.walls.map((wall) =>
+              wall.id === id ? { ...wall, color: currentPaintColor } : wall,
+            ),
+          };
+        }
+        if (kind === "foundation") {
+          return {
+            ...w,
+            foundation: { ...w.foundation, color: currentPaintColor },
+          };
+        }
+        return w;
+      });
+      setStatusMessage(`Painted ${kind}.`);
+    },
+    [currentPaintColor, updateWorld],
+  );
+
   const foremanDialogue = useMemo(
     () => getActiveDialogue(world, currentTool),
     [world, currentTool],
@@ -575,7 +630,9 @@ function App() {
   return (
     <main className="app-shell">
       <section className="editor-panel">
-        <div className="stage-shell">
+        <div
+          className={"stage-shell" + (isFirstPerson ? " is-firstperson" : "")}
+        >
           {isFirstPerson && (
             <div className="fp-key-guide">
               <div className="fp-key-guide__title">Controls</div>
@@ -593,6 +650,12 @@ function App() {
               </div>
               <div className="fp-key-guide__row">
                 <kbd>Esc</kbd> Exit FP
+              </div>
+              <div className="fp-key-guide__divider" />
+              <div className="fp-key-guide__title">Floor</div>
+              <div className="fp-key-guide__row is-active">
+                <kbd>PgUp/Dn</kbd>{" "}
+                {currentFloor === 0 ? "Ground" : `Floor ${currentFloor}`}
               </div>
               <div className="fp-key-guide__divider" />
               <div className="fp-key-guide__title">Tools</div>
@@ -660,6 +723,14 @@ function App() {
               >
                 <kbd>8</kbd> Furniture
               </div>
+              <div
+                className={
+                  "fp-key-guide__row" +
+                  (currentTool === "paint" ? " is-active" : "")
+                }
+              >
+                <kbd>9</kbd> Paint
+              </div>
             </div>
           )}
           {!isFirstPerson && uiVisible && (
@@ -694,6 +765,15 @@ function App() {
                     setStatusMessage("Undo.");
                   }
                 }}
+                currentPaintColor={currentPaintColor}
+                onSetPaintColor={(color) => {
+                  setCurrentPaintColor(color);
+                  setStatusMessage(
+                    `Paint color: ${color}. Click walls or floor to paint.`,
+                  );
+                }}
+                currentFloor={currentFloor}
+                onSetFloor={setCurrentFloor}
               />
             </>
           )}
@@ -714,6 +794,7 @@ function App() {
             onPlaceFurniture={placeFurniture}
             onPlaceSteelBar={placeSteelBar}
             onPlaceRoof={placeRoof}
+            onPaint={handlePaint}
             onSelectionChange={handleSelectionChange}
             onViewModeChange={setIsFirstPerson}
           />

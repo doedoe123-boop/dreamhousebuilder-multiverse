@@ -9,7 +9,8 @@ export type ToolMode =
   | "door"
   | "window"
   | "steelbar"
-  | "roof";
+  | "roof"
+  | "paint";
 
 export type Foundation = {
   x: number;
@@ -17,6 +18,7 @@ export type Foundation = {
   width: number;
   height: number;
   type: "floor";
+  color?: string;
 };
 
 export type Wall = {
@@ -27,6 +29,8 @@ export type Wall = {
   y2: number;
   thickness: number;
   material?: StructuralMaterial;
+  color?: string;
+  floor?: number;
 };
 
 export type Pillar = {
@@ -35,6 +39,7 @@ export type Pillar = {
   y: number;
   size: number;
   material?: StructuralMaterial;
+  floor?: number;
 };
 
 export type Furniture = {
@@ -45,6 +50,7 @@ export type Furniture = {
   width: number;
   height: number;
   rotation?: number;
+  floor?: number;
 };
 
 export type Door = {
@@ -52,6 +58,7 @@ export type Door = {
   wallId: string;
   t: number;
   width: number;
+  floor?: number;
 };
 
 export type Window = {
@@ -60,6 +67,7 @@ export type Window = {
   t: number;
   width: number;
   height: number;
+  floor?: number;
 };
 
 export type SteelBar = {
@@ -69,6 +77,7 @@ export type SteelBar = {
   x2: number;
   y2: number;
   diameter: number;
+  floor?: number;
 };
 
 export type RoofStyle = "flat" | "gable" | "hip";
@@ -82,6 +91,7 @@ export type Roof = {
   style: RoofStyle;
   overhang: number;
   pitch: number; // angle in degrees for gable/hip
+  floor?: number;
 };
 
 export type World = {
@@ -103,6 +113,7 @@ export type SelectedObject =
   | { kind: "window"; id: string }
   | { kind: "steelbar"; id: string }
   | { kind: "roof"; id: string }
+  | { kind: "foundation"; id: string }
   | null;
 
 export type CanvasSize = {

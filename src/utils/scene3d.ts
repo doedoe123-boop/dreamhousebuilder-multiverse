@@ -103,6 +103,7 @@ function createFurnitureObject(item: Furniture): Object3D {
     ),
     dimensions: createDimensions(item.width, objectHeight, item.height),
     rotation: item.rotation ?? 0,
+    floor: item.floor,
   };
 }
 
@@ -120,6 +121,7 @@ function createDoorObject(door: Door, wall: Wall): Door3D {
     wallId: door.wallId,
     position: createPosition(cx, DEFAULT_DOOR_HEIGHT_PX / 2, cy),
     dimensions: createDimensions(doorWidth, DEFAULT_DOOR_HEIGHT_PX, doorDepth),
+    floor: door.floor,
   };
 }
 
@@ -141,6 +143,7 @@ function createWindowObject(win: WindowObj, wall: Wall): Window3D {
       cy,
     ),
     dimensions: createDimensions(winWidth, win.height, winDepth),
+    floor: win.floor,
   };
 }
 
@@ -150,6 +153,7 @@ function createSteelBarObject(bar: SteelBar): SteelBar3D {
     start: createPosition(bar.x1, 0, bar.y1),
     end: createPosition(bar.x2, DEFAULT_STEELBAR_HEIGHT_PX, bar.y2),
     diameter: toSceneUnits(bar.diameter),
+    floor: bar.floor,
   };
 }
 
@@ -166,6 +170,7 @@ function createRoofObject(roof: Roof): Roof3D {
     style: roof.style,
     overhang: toSceneUnits(roof.overhang),
     pitch: roof.pitch,
+    floor: roof.floor,
   };
 }
 

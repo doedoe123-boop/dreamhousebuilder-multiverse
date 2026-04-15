@@ -5,12 +5,14 @@ import {
   IconCursor,
   IconDoor,
   IconFurniture,
+  IconPaintBrush,
   IconPillar,
   IconRoof,
   IconSteelBar,
   IconWall,
   IconWindow,
 } from "../icons/ToolIcons";
+import { PAINT_COLORS } from "../../constants/paint";
 import type {
   FurnitureType,
   SelectedObject,
@@ -34,6 +36,10 @@ type FloatingToolbarProps = {
   onLoadWorld: () => void;
   onDeleteSelected: () => void;
   onUndo: () => void;
+  currentPaintColor: string;
+  onSetPaintColor: (color: string) => void;
+  currentFloor: number;
+  onSetFloor: (floor: number) => void;
 };
 
 export function FloatingToolbar({
@@ -51,6 +57,10 @@ export function FloatingToolbar({
   onLoadWorld,
   onDeleteSelected,
   onUndo,
+  currentPaintColor,
+  onSetPaintColor,
+  currentFloor,
+  onSetFloor,
 }: FloatingToolbarProps) {
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
@@ -89,12 +99,14 @@ export function FloatingToolbar({
       tools: [
         { mode: "roof", label: "Roof", icon: <IconRoof /> },
         { mode: "furniture", label: "Furniture", icon: <IconFurniture /> },
+        { mode: "paint", label: "Paint", icon: <IconPaintBrush /> },
       ],
     },
   ];
 
   const showMaterialPicker = currentTool === "pillar" || currentTool === "wall";
   const showFurniturePicker = currentTool === "furniture";
+  const showPaintPicker = currentTool === "paint";
 
   return (
     <>
@@ -186,6 +198,55 @@ export function FloatingToolbar({
                 </div>
               </div>
             )}
+
+            {showPaintPicker && (
+              <div className="floating-toolbar floating-toolbar--stack">
+                <div className="floating-badge floating-badge--muted">
+                  Paint Color
+                </div>
+                <div className="floating-toolbar__group floating-toolbar__group--paint">
+                  {PAINT_COLORS.map((color) => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      className={`floating-tool floating-tool--swatch ${currentPaintColor === color.value ? "is-active" : ""}`}
+                      onClick={() => onSetPaintColor(color.value)}
+                      title={color.label}
+                    >
+                      <span
+                        className="toolbar__swatch toolbar__swatch--lg"
+                        style={{ backgroundColor: color.value }}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="floating-toolbar floating-toolbar--stack">
+              <div className="floating-badge floating-badge--muted">Floor</div>
+              <div className="floating-toolbar__group">
+                <button
+                  type="button"
+                  className="floating-tool"
+                  disabled={currentFloor <= 0}
+                  onClick={() => onSetFloor(Math.max(0, currentFloor - 1))}
+                >
+                  ▼
+                </button>
+                <span className="floating-badge">
+                  {currentFloor === 0 ? "Ground" : `Floor ${currentFloor}`}
+                </span>
+                <button
+                  type="button"
+                  className="floating-tool"
+                  disabled={currentFloor >= 9}
+                  onClick={() => onSetFloor(Math.min(9, currentFloor + 1))}
+                >
+                  ▲
+                </button>
+              </div>
+            </div>
 
             {selectedObject && (
               <div className="floating-toolbar floating-toolbar--stack">
