@@ -76,7 +76,7 @@ function App() {
   );
   const [currentFloor, setCurrentFloor] = useState(0);
   const [statusMessage, setStatusMessage] = useState(
-    "Welcome! Use WASD to walk. Press V for first-person view. H to toggle UI.",
+    "Use WASD to walk. Press V for first-person view. H to toggle UI.",
   );
 
   const toolStatusMessages = useMemo<Record<ToolMode, string>>(

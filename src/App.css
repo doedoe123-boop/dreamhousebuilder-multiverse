@@ -167,10 +167,11 @@
 
 .floating-status {
   position: absolute;
-  left: 32px;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 34px;
   z-index: 20;
-  max-width: 420px;
+  max-width: 520px;
   padding: 14px 16px;
   border: 1px solid rgba(210, 197, 177, 0.9);
   border-radius: 16px;
@@ -178,11 +179,13 @@
   color: #705a44;
   box-shadow: 0 16px 35px rgba(67, 48, 18, 0.1);
   pointer-events: auto;
+  text-align: center;
 }
 
 .floating-tool--status {
   position: absolute;
-  left: 32px;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 34px;
   z-index: 20;
 }

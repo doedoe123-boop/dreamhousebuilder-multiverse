@@ -53,13 +53,12 @@ export function createWorld3DRenderer(
 ) {
   // ── Scene setup ──
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color("#f6f1e6");
 
   const camera = new THREE.PerspectiveCamera(
     55,
     container.clientWidth / container.clientHeight,
     0.1,
-    1000,
+    1500,
   );
   camera.position.set(16, 18, 20);
 
@@ -166,11 +165,91 @@ export function createWorld3DRenderer(
   document.addEventListener("pointerlockchange", handlePointerLockChange);
 
   // ── Lighting ──
-  scene.add(new THREE.AmbientLight("#fff7ed", 1.6));
+  const ambientLight = new THREE.AmbientLight("#fff7ed", 1.6);
+  scene.add(ambientLight);
   const directionalLight = new THREE.DirectionalLight("#ffffff", 1.4);
   directionalLight.position.set(12, 24, 16);
   directionalLight.castShadow = true;
   scene.add(directionalLight);
+
+  // ── Sky gradient (large sphere with vertex colors) ──
+  const skyGeo = new THREE.SphereGeometry(400, 32, 16);
+  const skyColors = new Float32Array(skyGeo.attributes.position.count * 3);
+  const topColor = new THREE.Color("#87CEEB"); // sky blue
+  const horizonColor = new THREE.Color("#ddeeff"); // pale blue-white
+  const bottomColor = new THREE.Color("#8fbc8f"); // soft green tint below horizon
+  const tempColor = new THREE.Color();
+  for (let i = 0; i < skyGeo.attributes.position.count; i++) {
+    const y = skyGeo.attributes.position.getY(i);
+    const normalizedY = y / 400; // -1 to 1
+    if (normalizedY >= 0) {
+      tempColor.copy(horizonColor).lerp(topColor, normalizedY);
+    } else {
+      tempColor.copy(horizonColor).lerp(bottomColor, -normalizedY);
+    }
+    skyColors[i * 3] = tempColor.r;
+    skyColors[i * 3 + 1] = tempColor.g;
+    skyColors[i * 3 + 2] = tempColor.b;
+  }
+  skyGeo.setAttribute("color", new THREE.BufferAttribute(skyColors, 3));
+  const skyMat = new THREE.MeshBasicMaterial({
+    vertexColors: true,
+    side: THREE.BackSide,
+    depthWrite: false,
+  });
+  const skyDome = new THREE.Mesh(skyGeo, skyMat);
+  scene.add(skyDome);
+
+  // ── Terrain ground ──
+  const terrainSize = 600;
+  const terrainGeo = new THREE.PlaneGeometry(terrainSize, terrainSize, 64, 64);
+  terrainGeo.rotateX(-Math.PI / 2);
+  // Gentle rolling hills
+  const posAttr = terrainGeo.attributes.position;
+  for (let i = 0; i < posAttr.count; i++) {
+    const x = posAttr.getX(i);
+    const z = posAttr.getZ(i);
+    // Keep foundation area flat, hills outside
+    const distFromCenter = Math.sqrt(x * x + z * z);
+    const flatRadius = 60; // ~foundation area
+    const hillFactor = Math.max(0, (distFromCenter - flatRadius) / 80);
+    const height =
+      hillFactor *
+      (Math.sin(x * 0.02) * 1.2 +
+        Math.cos(z * 0.03) * 0.8 +
+        Math.sin((x + z) * 0.015) * 1.5);
+    posAttr.setY(i, Math.min(height, 6) - 0.15);
+  }
+  terrainGeo.computeVertexNormals();
+  // Vertex-colored terrain: grassier further out
+  const terrainColors = new Float32Array(posAttr.count * 3);
+  const grassColor = new THREE.Color("#5a8f4a");
+  const dirtColor = new THREE.Color("#9b8b6e");
+  const centerColor = new THREE.Color("#b8a88a");
+  for (let i = 0; i < posAttr.count; i++) {
+    const x = posAttr.getX(i);
+    const z = posAttr.getZ(i);
+    const dist = Math.sqrt(x * x + z * z);
+    const t = Math.min(1, Math.max(0, (dist - 30) / 100));
+    tempColor.copy(centerColor).lerp(dirtColor, Math.min(t, 0.5) * 2);
+    if (t > 0.5) tempColor.lerp(grassColor, (t - 0.5) * 2);
+    terrainColors[i * 3] = tempColor.r;
+    terrainColors[i * 3 + 1] = tempColor.g;
+    terrainColors[i * 3 + 2] = tempColor.b;
+  }
+  terrainGeo.setAttribute("color", new THREE.BufferAttribute(terrainColors, 3));
+  const terrainMat = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: 0.95,
+    metalness: 0,
+  });
+  const terrain = new THREE.Mesh(terrainGeo, terrainMat);
+  terrain.receiveShadow = true;
+  scene.add(terrain);
+
+  // ── Fog ──
+  scene.fog = new THREE.Fog("#c8ddf0", 80, 350);
+  scene.background = null; // sky dome replaces solid background
 
   // ── World root & interaction state ──
   const worldRoot = new THREE.Group();
@@ -448,6 +527,9 @@ export function createWorld3DRenderer(
 
     // Foreman follows the player
     foreman.update(player.group.position, dt);
+
+    // Keep sky dome centered on camera
+    skyDome.position.copy(camera.position);
 
     renderer.render(scene, camera);
   };
