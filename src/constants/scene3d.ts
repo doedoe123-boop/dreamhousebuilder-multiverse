@@ -1,0 +1,11 @@
+export const SCENE3D_VERSION = "1.0.0";
+export const SCENE3D_SCALE = 20;
+export const DEFAULT_WALL_HEIGHT_PX = 180;
+export const DEFAULT_WALL_THICKNESS_PX = 20;
+export const DEFAULT_FURNITURE_HEIGHT_PX = 20;
+export const DEFAULT_FLOOR_THICKNESS_PX = 8;
+export const DEFAULT_DOOR_HEIGHT_PX = 150;
+export const DEFAULT_WINDOW_HEIGHT_PX = 70;
+export const DEFAULT_WINDOW_ELEVATION_PX = 70;
+export const DEFAULT_STEELBAR_HEIGHT_PX = 190;
+export const DEFAULT_ROOF_THICKNESS_PX = 10;
