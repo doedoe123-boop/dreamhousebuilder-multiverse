@@ -305,6 +305,165 @@
   color: #6a5542;
 }
 
+.floating-foreman-prompt {
+  position: absolute;
+  left: 24px;
+  bottom: 28px;
+  z-index: 20;
+  width: 290px;
+  padding: 16px 18px;
+  border: 1px solid rgba(196, 180, 157, 0.9);
+  border-radius: 18px;
+  background: rgba(255, 251, 244, 0.94);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 36px rgba(67, 48, 18, 0.14);
+  color: #5d4835;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.floating-foreman-prompt__eyebrow {
+  margin-bottom: 6px;
+  color: #8a6c4b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.floating-foreman-prompt__title {
+  margin-bottom: 6px;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.floating-foreman-prompt__text {
+  color: #6f5944;
+  line-height: 1.5;
+  font-size: 0.92rem;
+}
+
+.floating-foreman-prompt__key {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 4px 10px;
+  border: 1px solid #cfbda4;
+  border-bottom-width: 2px;
+  border-radius: 10px;
+  background: #fffdf8;
+  color: #4c3b2d;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.floating-foreman-chat {
+  position: absolute;
+  left: 24px;
+  bottom: 170px;
+  z-index: 21;
+  width: 360px;
+  padding: 18px 20px;
+  border: 1px solid rgba(196, 180, 157, 0.92);
+  border-radius: 20px;
+  background: rgba(255, 251, 244, 0.96);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 22px 42px rgba(67, 48, 18, 0.16);
+  color: #4f3d2f;
+  pointer-events: auto;
+}
+
+.floating-foreman-chat__eyebrow {
+  margin-bottom: 4px;
+  color: #8a6c4b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.floating-foreman-chat__title {
+  font-size: 1.18rem;
+  font-weight: 700;
+}
+
+.floating-foreman-chat__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.floating-foreman-chat__badge {
+  padding: 6px 10px;
+  border: 1px solid rgba(198, 132, 42, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 241, 214, 0.95);
+  color: #8a6c4b;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.floating-foreman-chat__tone {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(245, 237, 224, 0.9);
+  color: #6b5644;
+  line-height: 1.5;
+  font-size: 0.88rem;
+}
+
+.floating-foreman-chat__section + .floating-foreman-chat__section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(196, 180, 157, 0.42);
+}
+
+.floating-foreman-chat__label {
+  margin-bottom: 6px;
+  color: #8a6c4b;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.floating-foreman-chat p {
+  margin: 0;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.floating-foreman-chat__action {
+  margin-top: 12px;
+  width: 100%;
+  justify-content: center;
+}
+
+.floating-foreman-chat__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.floating-foreman-chat__actions--compact {
+  margin-top: 0;
+}
+
+.floating-foreman-chat__reply {
+  margin-top: 12px !important;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 244, 225, 0.8);
+  color: #5e4937;
+}
+
 .builder-guide {
   position: absolute;
   right: 24px;
@@ -522,6 +681,18 @@ kbd {
   .guide-toggle {
     right: 16px;
     bottom: 24px;
+  }
+
+  .floating-foreman-prompt {
+    left: 16px;
+    bottom: 24px;
+    width: min(320px, calc(100vw - 32px));
+  }
+
+  .floating-foreman-chat {
+    left: 16px;
+    bottom: 166px;
+    width: min(360px, calc(100vw - 32px));
   }
 
   .floating-status,

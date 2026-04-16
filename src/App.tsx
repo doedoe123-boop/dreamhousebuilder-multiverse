@@ -1,532 +1,78 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import "./App.css";
+import { ForemanPanel } from "./components/layout/ForemanPanel";
 import { FloatingToolbar } from "./components/layout/FloatingToolbar";
 import { World3DView } from "./components/three/World3DView";
-import {
-  DEFAULT_FOUNDATION_HEIGHT,
-  DEFAULT_FOUNDATION_WIDTH,
-  DEFAULT_DOOR_WIDTH,
-  DEFAULT_PILLAR_SIZE,
-  DEFAULT_ROOF_OVERHANG,
-  DEFAULT_ROOF_PITCH,
-  DEFAULT_STEELBAR_DIAMETER,
-  DEFAULT_WALL_THICKNESS,
-  DEFAULT_WINDOW_HEIGHT,
-  DEFAULT_WINDOW_WIDTH,
-  GRID_SIZE,
-  INITIAL_WORLD,
-  STORAGE_KEY,
-} from "./constants/editor";
+import { GRID_SIZE } from "./constants/editor";
 import { FURNITURE_STYLES } from "./constants/furniture";
-import { SCENE3D_SCALE } from "./constants/scene3d";
-import type {
-  FurnitureType,
-  SelectedObject,
-  StructuralMaterial,
-  ToolMode,
-  World,
-} from "./types/world";
-import { createId, snap } from "./utils/editor";
-import { normalizeWorld } from "./utils/world";
-import { getActiveDialogue } from "./utils/dialogue";
-import { PAINT_COLORS } from "./constants/paint";
-
-const MAX_UNDO_HISTORY = 50;
+import type { ToolMode } from "./types/world";
+import {
+  getActiveDialogue,
+  getForemanIdeas,
+  getForemanMemoryReflection,
+  getForemanSmallTalk,
+  getForemanSimpleExplanation,
+  getForemanStageLabel,
+  getForemanStuckAdvice,
+  getForemanSuggestedStep,
+  getForemanTone,
+  getForemanWhatComesAfter,
+  getForemanWhyThisMatters,
+} from "./utils/dialogue";
+import { useWorldEditor } from "./hooks/useWorldEditor";
 
 function App() {
-  const [world, setWorld] = useState<World>(INITIAL_WORLD);
-  const worldHistoryRef = useRef<World[]>([]);
-  const [canUndo, setCanUndo] = useState(false);
-
-  /** Wrap setWorld to push previous state onto undo stack */
-  const updateWorld = useCallback(
-    (updater: World | ((prev: World) => World)) => {
-      setWorld((prev) => {
-        const next = typeof updater === "function" ? updater(prev) : updater;
-        if (next !== prev) {
-          worldHistoryRef.current = [
-            ...worldHistoryRef.current.slice(-(MAX_UNDO_HISTORY - 1)),
-            prev,
-          ];
-          setCanUndo(true);
-        }
-        return next;
-      });
-    },
-    [],
-  );
-
-  const undo = useCallback(() => {
-    const history = worldHistoryRef.current;
-    if (history.length === 0) return false;
-    const previous = history[history.length - 1];
-    worldHistoryRef.current = history.slice(0, -1);
-    setCanUndo(history.length > 1);
-    setWorld(previous);
-    return true;
-  }, []);
-  const [selectedObject, setSelectedObject] = useState<SelectedObject>(null);
-  const [currentTool, setCurrentTool] = useState<ToolMode>("foundation");
-  const [currentMaterial, setCurrentMaterial] =
-    useState<StructuralMaterial>("wood");
-  const [currentFurnitureType, setCurrentFurnitureType] =
-    useState<FurnitureType>("bed");
+  const {
+    world,
+    canUndo,
+    selectedObject,
+    currentTool,
+    currentMaterial,
+    currentFurnitureType,
+    currentPaintColor,
+    currentFloor,
+    statusMessage,
+    toolStatusMessages,
+    foremanMemoryEvent,
+    setCurrentTool,
+    setCurrentMaterial,
+    setCurrentFurnitureType,
+    setCurrentPaintColor,
+    setCurrentFloor,
+    setStatusMessage,
+    setSelectedObject,
+    setForemanMemoryEvent,
+    undo,
+    saveWorld,
+    loadWorld,
+    placeFoundation,
+    placePillar,
+    placeWall,
+    placeDoor,
+    placeWindow,
+    placeFurniture,
+    placeSteelBar,
+    placeRoof,
+    deleteSelected,
+    nudgeSelected,
+    handleSelectionChange,
+    handleSetTool,
+    handlePaint,
+  } = useWorldEditor();
   const [uiVisible, setUiVisible] = useState(true);
   const [isFirstPerson, setIsFirstPerson] = useState(false);
-  const [currentPaintColor, setCurrentPaintColor] = useState(
-    PAINT_COLORS[0].value,
-  );
-  const [currentFloor, setCurrentFloor] = useState(0);
-  const [statusMessage, setStatusMessage] = useState(
-    "Use WASD to walk. Press V for first-person view. H to toggle UI.",
-  );
-
-  const toolStatusMessages = useMemo<Record<ToolMode, string>>(
-    () => ({
-      select:
-        "Inspect mode. Click any object to select it. Press Delete to remove.",
-      foundation:
-        "Foundation tool. Click the land to place a build base before adding the house structure.",
-      pillar: `Pillar tool. Click the foundation to place a ${currentMaterial} pillar.`,
-      wall: `Wall tool. Click to set start point, click again to finish the wall.`,
-      door: "Door tool. Click on any wall to place a door.",
-      window: "Window tool. Click on any wall to place a window.",
-      furniture: `Furniture tool. Click the ground to place a ${currentFurnitureType}.`,
-      steelbar:
-        "Steel Bar tool. Click to set start, click again to finish the bar.",
-      roof: "Roof tool. Click to set first corner, click again for opposite corner.",
-      paint: "Paint tool. Click a wall or floor to paint it.",
-    }),
-    [currentMaterial, currentFurnitureType],
-  );
-
-  const saveWorld = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(world));
-    setStatusMessage("Project saved locally.");
-  };
-
-  const loadWorld = () => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) {
-      setStatusMessage("No saved project found.");
-      return;
+  const [isNearForeman, setIsNearForeman] = useState(false);
+  const [isTalkingToForeman, setIsTalkingToForeman] = useState(false);
+  const [foremanTopic, setForemanTopic] = useState<
+    "stuck" | "simple" | "ideas" | null
+  >(null);
+  const handleForemanNearbyChange = useCallback((nearby: boolean) => {
+    setIsNearForeman(nearby);
+    if (!nearby) {
+      setIsTalkingToForeman(false);
+      setForemanTopic(null);
     }
-    try {
-      const parsed = JSON.parse(saved) as Partial<World>;
-      const nextWorld = normalizeWorld(parsed);
-      setWorld(nextWorld);
-      worldHistoryRef.current = [];
-      setCanUndo(false);
-      setSelectedObject(null);
-      setStatusMessage("Project loaded.");
-    } catch {
-      setStatusMessage("Saved project could not be read.");
-    }
-  };
-
-  // --- Tool handlers ---
-
-  const placeFoundation = useCallback(
-    (x: number, y: number) => {
-      updateWorld((w) => ({
-        ...w,
-        foundation: {
-          x,
-          y,
-          width: DEFAULT_FOUNDATION_WIDTH,
-          height: DEFAULT_FOUNDATION_HEIGHT,
-          type: "floor",
-          color: w.foundation?.color,
-        },
-      }));
-      setSelectedObject(null);
-      setStatusMessage(
-        "Foundation placed. You can start adding pillars, walls, and the rest of the house.",
-      );
-    },
-    [updateWorld],
-  );
-
-  const placePillar = useCallback(
-    (x: number, y: number) => {
-      const pillarId = createId("pillar");
-      updateWorld((w) => ({
-        ...w,
-        pillars: [
-          ...w.pillars,
-          {
-            id: pillarId,
-            x,
-            y,
-            size: DEFAULT_PILLAR_SIZE,
-            material: currentMaterial,
-            floor: currentFloor,
-          },
-        ],
-      }));
-      setSelectedObject(null);
-      setStatusMessage(`Placed ${currentMaterial} pillar.`);
-    },
-    [currentMaterial, currentFloor, updateWorld],
-  );
-
-  const placeWall = useCallback(
-    (x1: number, y1: number, x2: number, y2: number) => {
-      const wallId = createId("wall");
-      updateWorld((w) => ({
-        ...w,
-        walls: [
-          ...w.walls,
-          {
-            id: wallId,
-            x1,
-            y1,
-            x2,
-            y2,
-            thickness: DEFAULT_WALL_THICKNESS,
-            material: currentMaterial,
-            floor: currentFloor,
-          },
-        ],
-      }));
-      setSelectedObject(null);
-      setStatusMessage(`Wall placed. Click to start another or switch tools.`);
-    },
-    [currentMaterial, currentFloor, updateWorld],
-  );
-
-  const placeDoor = useCallback(
-    (wallId: string, hitX: number, hitZ: number) => {
-      // Find the wall and compute t from the 3D hit point
-      updateWorld((w) => {
-        const wall = w.walls.find((w) => w.id === wallId);
-        if (!wall) return w;
-
-        const worldHitX = hitX * SCENE3D_SCALE;
-        const worldHitZ = hitZ * SCENE3D_SCALE;
-
-        const dx = wall.x2 - wall.x1;
-        const dy = wall.y2 - wall.y1;
-        const wallLength = Math.sqrt(dx * dx + dy * dy);
-        if (wallLength < 1) return w;
-
-        // Project hit point onto wall line
-        const t = Math.max(
-          0.1,
-          Math.min(
-            0.9,
-            ((worldHitX - wall.x1) * dx + (worldHitZ - wall.y1) * dy) /
-              (wallLength * wallLength),
-          ),
-        );
-
-        const doorId = createId("door");
-        return {
-          ...w,
-          doors: [
-            ...w.doors,
-            {
-              id: doorId,
-              wallId,
-              t,
-              width: DEFAULT_DOOR_WIDTH,
-              floor: currentFloor,
-            },
-          ],
-        };
-      });
-      setStatusMessage("Door placed on wall.");
-    },
-    [currentFloor, updateWorld],
-  );
-
-  const placeWindow = useCallback(
-    (wallId: string, hitX: number, hitZ: number) => {
-      updateWorld((w) => {
-        const wall = w.walls.find((w) => w.id === wallId);
-        if (!wall) return w;
-
-        const worldHitX = hitX * SCENE3D_SCALE;
-        const worldHitZ = hitZ * SCENE3D_SCALE;
-
-        const dx = wall.x2 - wall.x1;
-        const dy = wall.y2 - wall.y1;
-        const wallLength = Math.sqrt(dx * dx + dy * dy);
-        if (wallLength < 1) return w;
-
-        const t = Math.max(
-          0.1,
-          Math.min(
-            0.9,
-            ((worldHitX - wall.x1) * dx + (worldHitZ - wall.y1) * dy) /
-              (wallLength * wallLength),
-          ),
-        );
-
-        const windowId = createId("window");
-        return {
-          ...w,
-          windows: [
-            ...w.windows,
-            {
-              id: windowId,
-              wallId,
-              t,
-              width: DEFAULT_WINDOW_WIDTH,
-              height: DEFAULT_WINDOW_HEIGHT,
-              floor: currentFloor,
-            },
-          ],
-        };
-      });
-      setStatusMessage("Window placed on wall.");
-    },
-    [currentFloor, updateWorld],
-  );
-
-  const placeFurniture = useCallback(
-    (type: FurnitureType, x: number, y: number) => {
-      const catalog = FURNITURE_STYLES[type];
-      const furnitureId = createId(type);
-      updateWorld((w) => ({
-        ...w,
-        furniture: [
-          ...w.furniture,
-          {
-            id: furnitureId,
-            type,
-            x: snap(x - catalog.defaultWidth / 2),
-            y: snap(y - catalog.defaultHeight / 2),
-            width: catalog.defaultWidth,
-            height: catalog.defaultHeight,
-            floor: currentFloor,
-          },
-        ],
-      }));
-      setSelectedObject(null);
-      setStatusMessage(`Placed ${catalog.label}.`);
-    },
-    [currentFloor, updateWorld],
-  );
-
-  const placeSteelBar = useCallback(
-    (x1: number, y1: number, x2: number, y2: number) => {
-      const barId = createId("steelbar");
-      updateWorld((w) => ({
-        ...w,
-        steelBars: [
-          ...w.steelBars,
-          {
-            id: barId,
-            x1,
-            y1,
-            x2,
-            y2,
-            diameter: DEFAULT_STEELBAR_DIAMETER,
-            floor: currentFloor,
-          },
-        ],
-      }));
-      setSelectedObject(null);
-      setStatusMessage("Steel bar placed. Click to start another.");
-    },
-    [currentFloor, updateWorld],
-  );
-
-  const placeRoof = useCallback(
-    (x: number, y: number, width: number, height: number) => {
-      const roofId = createId("roof");
-      updateWorld((w) => ({
-        ...w,
-        roofs: [
-          ...w.roofs,
-          {
-            id: roofId,
-            x,
-            y,
-            width,
-            height,
-            style: "gable",
-            overhang: DEFAULT_ROOF_OVERHANG,
-            pitch: DEFAULT_ROOF_PITCH,
-            floor: currentFloor,
-          },
-        ],
-      }));
-      setSelectedObject(null);
-      setStatusMessage("Roof placed.");
-    },
-    [currentFloor, updateWorld],
-  );
-
-  const deleteSelected = useCallback(() => {
-    if (!selectedObject) {
-      setStatusMessage("Nothing selected to delete.");
-      return;
-    }
-
-    const { kind, id } = selectedObject;
-
-    updateWorld((w) => {
-      if (kind === "wall") {
-        // Also remove doors/windows on this wall
-        return {
-          ...w,
-          walls: w.walls.filter((item) => item.id !== id),
-          doors: w.doors.filter((item) => item.wallId !== id),
-          windows: w.windows.filter((item) => item.wallId !== id),
-        };
-      }
-      if (kind === "pillar")
-        return { ...w, pillars: w.pillars.filter((item) => item.id !== id) };
-      if (kind === "furniture")
-        return {
-          ...w,
-          furniture: w.furniture.filter((item) => item.id !== id),
-        };
-      if (kind === "door")
-        return { ...w, doors: w.doors.filter((item) => item.id !== id) };
-      if (kind === "window")
-        return { ...w, windows: w.windows.filter((item) => item.id !== id) };
-      if (kind === "steelbar")
-        return {
-          ...w,
-          steelBars: w.steelBars.filter((item) => item.id !== id),
-        };
-      if (kind === "roof")
-        return { ...w, roofs: w.roofs.filter((item) => item.id !== id) };
-      if (kind === "foundation") {
-        return {
-          ...w,
-          foundation: null,
-          walls: [],
-          pillars: [],
-          furniture: [],
-          doors: [],
-          windows: [],
-          steelBars: [],
-          roofs: [],
-        };
-      }
-      return w;
-    });
-
-    setStatusMessage(`Deleted ${kind}.`);
-    setSelectedObject(null);
-  }, [selectedObject, updateWorld]);
-
-  // Nudge selected object by arrow keys
-  const nudgeSelected = useCallback(
-    (dx: number, dy: number) => {
-      if (!selectedObject) return;
-      const { kind, id } = selectedObject;
-      updateWorld((w) => {
-        if (kind === "pillar") {
-          return {
-            ...w,
-            pillars: w.pillars.map((p) =>
-              p.id === id ? { ...p, x: p.x + dx, y: p.y + dy } : p,
-            ),
-          };
-        }
-        if (kind === "wall") {
-          return {
-            ...w,
-            walls: w.walls.map((wall) =>
-              wall.id === id
-                ? {
-                    ...wall,
-                    x1: wall.x1 + dx,
-                    y1: wall.y1 + dy,
-                    x2: wall.x2 + dx,
-                    y2: wall.y2 + dy,
-                  }
-                : wall,
-            ),
-          };
-        }
-        if (kind === "furniture") {
-          return {
-            ...w,
-            furniture: w.furniture.map((f) =>
-              f.id === id ? { ...f, x: f.x + dx, y: f.y + dy } : f,
-            ),
-          };
-        }
-        if (kind === "door") {
-          const door = w.doors.find((d) => d.id === id);
-          if (!door) return w;
-          const wall = w.walls.find((wall) => wall.id === door.wallId);
-          if (!wall) return w;
-          const wallDx = wall.x2 - wall.x1;
-          const wallDy = wall.y2 - wall.y1;
-          const wallLen = Math.sqrt(wallDx * wallDx + wallDy * wallDy);
-          if (wallLen < 1) return w;
-          // Project the nudge vector onto the wall direction
-          const proj = (dx * wallDx + dy * wallDy) / (wallLen * wallLen);
-          const newT = Math.max(0.1, Math.min(0.9, door.t + proj));
-          return {
-            ...w,
-            doors: w.doors.map((d) => (d.id === id ? { ...d, t: newT } : d)),
-          };
-        }
-        if (kind === "window") {
-          const win = w.windows.find((win) => win.id === id);
-          if (!win) return w;
-          const wall = w.walls.find((wall) => wall.id === win.wallId);
-          if (!wall) return w;
-          const wallDx = wall.x2 - wall.x1;
-          const wallDy = wall.y2 - wall.y1;
-          const wallLen = Math.sqrt(wallDx * wallDx + wallDy * wallDy);
-          if (wallLen < 1) return w;
-          const proj = (dx * wallDx + dy * wallDy) / (wallLen * wallLen);
-          const newT = Math.max(0.1, Math.min(0.9, win.t + proj));
-          return {
-            ...w,
-            windows: w.windows.map((win) =>
-              win.id === id ? { ...win, t: newT } : win,
-            ),
-          };
-        }
-        if (kind === "steelbar") {
-          return {
-            ...w,
-            steelBars: w.steelBars.map((bar) =>
-              bar.id === id
-                ? {
-                    ...bar,
-                    x1: bar.x1 + dx,
-                    y1: bar.y1 + dy,
-                    x2: bar.x2 + dx,
-                    y2: bar.y2 + dy,
-                  }
-                : bar,
-            ),
-          };
-        }
-        if (kind === "roof") {
-          return {
-            ...w,
-            roofs: w.roofs.map((r) =>
-              r.id === id ? { ...r, x: r.x + dx, y: r.y + dy } : r,
-            ),
-          };
-        }
-        if (kind === "foundation" && w.foundation) {
-          return {
-            ...w,
-            foundation: {
-              ...w.foundation,
-              x: w.foundation.x + dx,
-              y: w.foundation.y + dy,
-            },
-          };
-        }
-        return w;
-      });
-    },
-    [selectedObject, updateWorld],
-  );
+  }, []);
 
   // Keyboard shortcut for delete, undo, and nudge
   useEffect(() => {
@@ -543,6 +89,7 @@ function App() {
         event.preventDefault();
         if (undo()) {
           setSelectedObject(null);
+          setForemanMemoryEvent("undid-step");
           setStatusMessage("Undo.");
         }
         return;
@@ -556,9 +103,31 @@ function App() {
 
       // Escape to deselect / cancel wall
       if (event.key === "Escape") {
+        if (isTalkingToForeman) {
+          setIsTalkingToForeman(false);
+          setForemanTopic(null);
+          return;
+        }
         setSelectedObject(null);
         setCurrentTool("select");
         setStatusMessage(toolStatusMessages.select);
+        return;
+      }
+
+      if (
+        event.key.toLowerCase() === "e" &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        isNearForeman
+      ) {
+        event.preventDefault();
+        setIsTalkingToForeman((open) => {
+          const next = !open;
+          if (!next) {
+            setForemanTopic(null);
+          }
+          return next;
+        });
         return;
       }
 
@@ -626,63 +195,66 @@ function App() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [deleteSelected, toolStatusMessages, undo, selectedObject, nudgeSelected]);
-
-  const handleSelectionChange = useCallback(
-    (selection: SelectedObject) => {
-      setSelectedObject(selection);
-      setStatusMessage(
-        selection
-          ? `Selected ${selection.kind}. Press Delete to remove.`
-          : toolStatusMessages[currentTool],
-      );
-    },
-    [toolStatusMessages, currentTool],
-  );
-
-  const handleSetTool = (tool: ToolMode) => {
-    setCurrentTool(tool);
-    setSelectedObject(null);
-    if (!world.foundation && tool !== "foundation" && tool !== "select") {
-      setStatusMessage(
-        "Place a foundation first, then continue with pillars, walls, and the rest of the house.",
-      );
-      return;
-    }
-    setStatusMessage(toolStatusMessages[tool]);
-  };
-
-  const handlePaint = useCallback(
-    (kind: "wall" | "foundation", id: string) => {
-      updateWorld((w) => {
-        if (kind === "wall") {
-          return {
-            ...w,
-            walls: w.walls.map((wall) =>
-              wall.id === id ? { ...wall, color: currentPaintColor } : wall,
-            ),
-          };
-        }
-        if (kind === "foundation") {
-          if (!w.foundation) {
-            return w;
-          }
-          return {
-            ...w,
-            foundation: { ...w.foundation, color: currentPaintColor },
-          };
-        }
-        return w;
-      });
-      setStatusMessage(`Painted ${kind}.`);
-    },
-    [currentPaintColor, updateWorld],
-  );
+  }, [
+    deleteSelected,
+    isNearForeman,
+    isTalkingToForeman,
+    nudgeSelected,
+    selectedObject,
+    setCurrentFloor,
+    setCurrentTool,
+    setForemanMemoryEvent,
+    setSelectedObject,
+    setStatusMessage,
+    toolStatusMessages,
+    undo,
+  ]);
 
   const foremanDialogue = useMemo(
     () => getActiveDialogue(world, currentTool),
     [world, currentTool],
   );
+  const foremanSmallTalk = useMemo(
+    () => getForemanSmallTalk(world, currentTool),
+    [world, currentTool],
+  );
+  const foremanSuggestedStep = useMemo(
+    () => getForemanSuggestedStep(world),
+    [world],
+  );
+  const foremanStageLabel = useMemo(() => getForemanStageLabel(world), [world]);
+  const foremanTone = useMemo(() => getForemanTone(world), [world]);
+  const foremanMemoryReflection = useMemo(
+    () => getForemanMemoryReflection(foremanMemoryEvent, world),
+    [foremanMemoryEvent, world],
+  );
+  const foremanStuckAdvice = useMemo(
+    () => getForemanStuckAdvice(world),
+    [world],
+  );
+  const foremanSimpleExplanation = useMemo(
+    () => getForemanSimpleExplanation(world),
+    [world],
+  );
+  const foremanIdeas = useMemo(() => getForemanIdeas(world), [world]);
+  const foremanWhyThisMatters = useMemo(
+    () => getForemanWhyThisMatters(world),
+    [world],
+  );
+  const foremanWhatComesAfter = useMemo(
+    () => getForemanWhatComesAfter(world),
+    [world],
+  );
+  const foremanSuggestedTool = useMemo<ToolMode | null>(() => {
+    if (!world.foundation) return "foundation";
+    if (world.pillars.length === 0) return "pillar";
+    if (world.walls.length === 0) return "wall";
+    if (world.doors.length === 0) return "door";
+    if (world.windows.length === 0) return "window";
+    if (world.roofs.length === 0) return "roof";
+    if (world.furniture.length === 0) return "furniture";
+    return null;
+  }, [world]);
 
   return (
     <main className="app-shell">
@@ -840,6 +412,42 @@ function App() {
                 currentFloor={currentFloor}
                 onSetFloor={setCurrentFloor}
               />
+              <ForemanPanel
+                isNearForeman={isNearForeman}
+                isTalkingToForeman={isTalkingToForeman}
+                foremanTopic={foremanTopic}
+                foremanStageLabel={foremanStageLabel}
+                foremanTone={foremanTone}
+                foremanDialogue={foremanDialogue}
+                foremanSmallTalk={foremanSmallTalk}
+                foremanSuggestedStep={foremanSuggestedStep}
+                foremanSuggestedTool={foremanSuggestedTool}
+                foremanStuckAdvice={foremanStuckAdvice}
+                foremanSimpleExplanation={foremanSimpleExplanation}
+                foremanIdeas={foremanIdeas}
+                foremanMemoryReflection={foremanMemoryReflection}
+                foremanWhyThisMatters={foremanWhyThisMatters}
+                foremanWhatComesAfter={foremanWhatComesAfter}
+                onSetTopic={setForemanTopic}
+                onShowSuggestedTool={() => {
+                  if (!foremanSuggestedTool) return;
+                  handleSetTool(foremanSuggestedTool);
+                  setForemanMemoryEvent("followed-advice");
+                  setForemanTopic(null);
+                  setStatusMessage(
+                    `Foreman Elias switched you to the ${foremanSuggestedTool} tool.`,
+                  );
+                }}
+                onInspectMode={() => {
+                  setCurrentTool("select");
+                  setSelectedObject(null);
+                  setForemanMemoryEvent("followed-advice");
+                  setForemanTopic(null);
+                  setStatusMessage(
+                    "Foreman Elias switched you back to inspect mode.",
+                  );
+                }}
+              />
             </>
           )}
           {!isFirstPerson && !uiVisible && (
@@ -863,6 +471,7 @@ function App() {
             onPaint={handlePaint}
             onSelectionChange={handleSelectionChange}
             onViewModeChange={setIsFirstPerson}
+            onForemanNearbyChange={handleForemanNearbyChange}
           />
         </div>
       </section>

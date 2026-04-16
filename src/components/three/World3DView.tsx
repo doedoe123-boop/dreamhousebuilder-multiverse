@@ -23,6 +23,7 @@ type World3DViewProps = {
   onPlaceRoof?: (x: number, y: number, width: number, height: number) => void;
   onPaint?: (kind: "wall" | "foundation", id: string) => void;
   onViewModeChange?: (fp: boolean) => void;
+  onForemanNearbyChange?: (nearby: boolean) => void;
 };
 
 export function World3DView({
@@ -41,6 +42,7 @@ export function World3DView({
   onPlaceRoof,
   onPaint,
   onViewModeChange,
+  onForemanNearbyChange,
 }: World3DViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<ReturnType<typeof createWorld3DRenderer> | null>(
@@ -81,6 +83,7 @@ export function World3DView({
       onPlaceSteelBar,
       onPlaceRoof,
       onPaint,
+      onForemanNearbyChange,
     });
   }, [
     currentTool,
@@ -95,6 +98,7 @@ export function World3DView({
     onPlaceRoof,
     onPaint,
     onSelectionChange,
+    onForemanNearbyChange,
   ]);
 
   useEffect(() => {

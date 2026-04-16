@@ -1,5 +1,9 @@
 # AGENTS.md — Dream House Builder
 
+This file is the project-level direction.
+
+Detailed engineering and structure rules live in [docs/AGENT_CODE_OF_CONDUCT.md](docs/AGENT_CODE_OF_CONDUCT.md) and must be followed alongside this file.
+
 ## Project Overview
 Dream House Builder is currently a web-based, local-first, 3D house-construction builder.
 
@@ -24,6 +28,11 @@ Agents must prioritize:
 Do not over-engineer.
 
 Current priority is not feature sprawl. Current priority is making the existing house-building workflow dependable and understandable.
+
+Narrative direction should support that goal:
+- the player arrives at an open plot of land
+- the foreman is already on-site and acts as the in-world guide
+- the build flow should feel like learning from a friendly expert, not reading a sterile editor manual
 
 ---
 
@@ -127,6 +136,8 @@ Agents should ensure:
 - Avoid premature optimization
 - Use types where they improve clarity
 - Keep files focused and reasonably small
+- Split oversized mixed-responsibility files before they become harder to maintain
+- Prefer modular renderer, dialogue, and UI files over one growing catch-all file
 
 ---
 
@@ -139,6 +150,7 @@ When making changes:
 4. Do not introduce unnecessary libraries
 5. Keep docs aligned with the real product state
 6. Treat beginner usability as a first-class concern
+7. Follow the structural rules in `docs/AGENT_CODE_OF_CONDUCT.md`
 
 ---
 

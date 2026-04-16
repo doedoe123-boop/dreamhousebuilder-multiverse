@@ -1,6 +1,7 @@
 import * as THREE from "three";
 
 const PLAYER_SPEED = 8;
+const FOREMAN_SITE_POSITION = new THREE.Vector3(-18, 0, 18);
 
 export type PlayerCharacter = {
   group: THREE.Group;
@@ -288,6 +289,202 @@ export type ForemanNPC = {
   setDialogue(text: string): void;
 };
 
+export function createForemanCabin(): THREE.Group {
+  const cabin = new THREE.Group();
+
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(6.8, 0.28, 5.4),
+    new THREE.MeshStandardMaterial({
+      color: "#8a755d",
+      roughness: 0.96,
+    }),
+  );
+  base.position.set(0, 0.14, 0);
+  base.receiveShadow = true;
+  cabin.add(base);
+
+  const gravelPad = new THREE.Mesh(
+    new THREE.CylinderGeometry(5.8, 6.2, 0.08, 24),
+    new THREE.MeshStandardMaterial({
+      color: "#c4b59c",
+      roughness: 1,
+    }),
+  );
+  gravelPad.position.set(0.2, 0.02, 0.2);
+  gravelPad.receiveShadow = true;
+  cabin.add(gravelPad);
+
+  const wallMaterial = new THREE.MeshStandardMaterial({
+    color: "#d4c1a4",
+    roughness: 0.9,
+  });
+  const trimMaterial = new THREE.MeshStandardMaterial({
+    color: "#6a5847",
+    roughness: 0.92,
+  });
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(5.6, 2.7, 4.2),
+    wallMaterial,
+  );
+  body.position.set(0, 1.63, 0);
+  body.castShadow = true;
+  body.receiveShadow = true;
+  cabin.add(body);
+
+  const door = new THREE.Mesh(
+    new THREE.BoxGeometry(0.9, 1.95, 0.12),
+    new THREE.MeshStandardMaterial({
+      color: "#6f523f",
+      roughness: 0.88,
+    }),
+  );
+  door.position.set(-1.35, 1.12, 2.16);
+  door.castShadow = true;
+  cabin.add(door);
+
+  const doorWindow = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.28, 0.42),
+    new THREE.MeshStandardMaterial({
+      color: "#a9d0de",
+      emissive: "#3e5662",
+      emissiveIntensity: 0.12,
+      roughness: 0.18,
+      metalness: 0.08,
+      side: THREE.DoubleSide,
+    }),
+  );
+  doorWindow.position.set(-1.35, 1.42, 2.225);
+  cabin.add(doorWindow);
+
+  [
+    [-2.25, 1.46, 2.16],
+    [1.55, 1.46, 2.16],
+  ].forEach(([x, y, z]) => {
+    const frame = new THREE.Mesh(
+      new THREE.BoxGeometry(1.18, 1.04, 0.12),
+      trimMaterial,
+    );
+    frame.position.set(x, y, z);
+    frame.castShadow = true;
+    cabin.add(frame);
+
+    const pane = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.92, 0.78),
+      new THREE.MeshStandardMaterial({
+        color: "#c7e0ea",
+        emissive: "#698d98",
+        emissiveIntensity: 0.15,
+        roughness: 0.12,
+        metalness: 0.08,
+        side: THREE.DoubleSide,
+      }),
+    );
+    pane.position.set(x, y, z + 0.065);
+    cabin.add(pane);
+  });
+
+  const roof = new THREE.Mesh(
+    new THREE.ConeGeometry(4.6, 1.85, 4),
+    new THREE.MeshStandardMaterial({
+      color: "#84644e",
+      roughness: 0.95,
+    }),
+  );
+  roof.rotation.y = Math.PI / 4;
+  roof.position.set(0, 3.76, 0);
+  roof.castShadow = true;
+  cabin.add(roof);
+
+  const porch = new THREE.Mesh(
+    new THREE.BoxGeometry(2.8, 0.18, 1.4),
+    new THREE.MeshStandardMaterial({
+      color: "#9a8465",
+      roughness: 0.95,
+    }),
+  );
+  porch.position.set(-1.05, 0.31, 2.82);
+  porch.receiveShadow = true;
+  cabin.add(porch);
+
+  [-2.15, -0.15].forEach((x) => {
+    const post = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08, 0.08, 2.05, 10),
+      trimMaterial.clone(),
+    );
+    post.position.set(x, 1.2, 2.42);
+    post.castShadow = true;
+    cabin.add(post);
+  });
+
+  const signPost = new THREE.Mesh(
+    new THREE.BoxGeometry(0.16, 2.25, 0.16),
+    new THREE.MeshStandardMaterial({ color: "#6f5843", roughness: 0.96 }),
+  );
+  signPost.position.set(3.75, 1.18, 1.65);
+  signPost.castShadow = true;
+  cabin.add(signPost);
+
+  const signCanvas = document.createElement("canvas");
+  signCanvas.width = 512;
+  signCanvas.height = 192;
+  const signCtx = signCanvas.getContext("2d");
+  if (signCtx) {
+    signCtx.fillStyle = "#fbf3e4";
+    signCtx.fillRect(0, 0, signCanvas.width, signCanvas.height);
+    signCtx.strokeStyle = "#8f6d47";
+    signCtx.lineWidth = 14;
+    signCtx.strokeRect(7, 7, signCanvas.width - 14, signCanvas.height - 14);
+    signCtx.fillStyle = "#684e33";
+    signCtx.font = "700 56px sans-serif";
+    signCtx.textAlign = "center";
+    signCtx.textBaseline = "middle";
+    signCtx.fillText("FOREMAN", signCanvas.width / 2, 70);
+    signCtx.font = "600 38px sans-serif";
+    signCtx.fillText("CABIN", signCanvas.width / 2, 126);
+    signCtx.font = "500 24px sans-serif";
+    signCtx.fillText("Need help? Come by.", signCanvas.width / 2, 162);
+  }
+
+  const signBoard = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.05, 0.78),
+    new THREE.MeshStandardMaterial({
+      map: new THREE.CanvasTexture(signCanvas),
+      transparent: false,
+      side: THREE.DoubleSide,
+    }),
+  );
+  signBoard.position.set(3.75, 2.2, 1.65);
+  signBoard.rotation.y = -Math.PI / 6;
+  cabin.add(signBoard);
+
+  const crate = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8, 0.55, 0.8),
+    new THREE.MeshStandardMaterial({
+      color: "#8d6f54",
+      roughness: 0.93,
+    }),
+  );
+  crate.position.set(2.35, 0.36, 2.55);
+  crate.castShadow = true;
+  cabin.add(crate);
+
+  const lamp = new THREE.Mesh(
+    new THREE.SphereGeometry(0.12, 12, 10),
+    new THREE.MeshStandardMaterial({
+      color: "#ffd994",
+      emissive: "#c89435",
+      emissiveIntensity: 0.4,
+      roughness: 0.2,
+    }),
+  );
+  lamp.position.set(-1.35, 2.18, 2.18);
+  cabin.add(lamp);
+
+  cabin.position.copy(FOREMAN_SITE_POSITION);
+  return cabin;
+}
+
 export function createForemanNPC(): ForemanNPC {
   const worker = createStylizedWorker({
     jacket: "#5d4637",
@@ -298,7 +495,7 @@ export function createForemanNPC(): ForemanNPC {
     boot: "#2e2622",
   });
   const group = worker.group;
-  group.position.set(7, 0, 5);
+  group.position.copy(FOREMAN_SITE_POSITION).add(new THREE.Vector3(0.4, 0, 3));
 
   const clipboard = new THREE.Mesh(
     new THREE.BoxGeometry(0.18, 0.22, 0.025),
@@ -324,6 +521,7 @@ export function createForemanNPC(): ForemanNPC {
   group.add(sprite);
 
   let currentText = "";
+  let playerNearby = false;
 
   function drawBubble(text: string) {
     ctx.clearRect(0, 0, 512, 128);
@@ -373,20 +571,30 @@ export function createForemanNPC(): ForemanNPC {
     });
 
     bubbleTexture.needsUpdate = true;
-    sprite.visible = true;
+    sprite.visible = playerNearby;
   }
 
-  const FOLLOW_OFFSET = new THREE.Vector3(2.4, 0, 1.2);
-  const FOLLOW_SPEED = 3;
+  const homePosition = group.position.clone();
+  const facingPoint = new THREE.Vector3(
+    homePosition.x + 10,
+    0,
+    homePosition.z - 14,
+  );
 
   function update(playerPosition: THREE.Vector3, dt: number) {
-    const target = playerPosition.clone().add(FOLLOW_OFFSET);
-    group.position.lerp(target, FOLLOW_SPEED * dt);
+    const distanceToPlayer = playerPosition.distanceTo(group.position);
+    playerNearby = distanceToPlayer < 10.5;
+    sprite.visible = playerNearby && !!currentText;
 
-    const dir = playerPosition.clone().sub(group.position);
+    const lookTarget = playerNearby ? playerPosition : facingPoint;
+    const dir = lookTarget.clone().sub(group.position);
     dir.y = 0;
     if (dir.lengthSq() > 0.01) {
-      group.rotation.y = Math.atan2(dir.x, dir.z);
+      const targetRotation = Math.atan2(dir.x, dir.z);
+      let delta = targetRotation - group.rotation.y;
+      while (delta > Math.PI) delta -= Math.PI * 2;
+      while (delta < -Math.PI) delta += Math.PI * 2;
+      group.rotation.y += delta * Math.min(1, dt * 4.5);
     }
 
     const sway = Math.sin(performance.now() * 0.003) * 0.05;

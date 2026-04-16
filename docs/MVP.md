@@ -13,6 +13,28 @@ Long-term vision can still include sharing, visiting other houses, cloud save, a
 
 ---
 
+## Story Frame
+The current product should feel like arriving at your own plot of land with a foreman already on-site, ready to help you build.
+
+The intended narrative is:
+- the player arrives at an open piece of land
+- the foreman is already there waiting to guide the job
+- the player can build freely, but can also rely on the foreman for simple next-step advice
+- the house is built in natural order: foundation first, then structure, then finishing touches
+
+This story matters because it makes the guide feel like part of the world instead of disconnected UI.
+
+Short product pitch:
+
+> You arrive at your land, meet the foreman, and build your dream house step by step with help always nearby.
+
+Important note for implementation:
+- the foreman should sound calm, practical, and welcoming
+- helper dialogue should include light small-talk, not just instructions
+- narrative copy should never assume the user is an architect or carpenter
+
+---
+
 ## Current Goal
 Ship a stable local-first 3D builder that proves this loop:
 
@@ -54,6 +76,7 @@ No backend. No accounts. No multiplayer.
 - step-by-step builder guide
 - contextual helper dialogue
 - status messaging for the active tool
+- a foreman-led onboarding tone that feels human, not robotic
 
 ---
 
@@ -102,6 +125,7 @@ This phase is successful when:
 - complete and polish all existing tools so they behave consistently
 - improve editing after placement
 - make guide flow feel central instead of secondary
+- strengthen the foreman story so guidance feels like world interaction, not tooltips only
 - strengthen placement rules and structural integrity
 - clean up legacy code and outdated docs
 
