@@ -6,9 +6,7 @@ import {
   DEFAULT_PILLAR_SIZE,
   GRID_SIZE,
 } from "../constants/editor";
-import {
-  SCENE3D_SCALE,
-} from "../constants/scene3d";
+import { SCENE3D_SCALE } from "../constants/scene3d";
 import type {
   FurnitureType,
   SelectedObject,
@@ -165,10 +163,15 @@ export function createWorld3DRenderer(
     onViewModeChange?.(false);
   };
 
+  // When true, pointer lock is temporarily released (e.g. foreman chat)
+  let pointerLockPaused = false;
+
   // Exit FP when pointer lock is lost (e.g. pressing Escape)
   const handlePointerLockChange = () => {
     if (firstPerson && document.pointerLockElement !== renderer.domElement) {
-      exitFirstPerson();
+      if (!pointerLockPaused) {
+        exitFirstPerson();
+      }
     }
   };
   document.addEventListener("pointerlockchange", handlePointerLockChange);
@@ -742,6 +745,20 @@ export function createWorld3DRenderer(
     },
     setForemanDialogue(text: string) {
       foreman.setDialogue(text);
+    },
+    setForemanTalking(talking: boolean) {
+      foreman.setTalking(talking);
+      if (firstPerson) {
+        if (talking) {
+          pointerLockPaused = true;
+          if (document.pointerLockElement === renderer.domElement) {
+            document.exitPointerLock();
+          }
+        } else {
+          pointerLockPaused = false;
+          renderer.domElement.requestPointerLock();
+        }
+      }
     },
     setOnViewModeChange(cb: (fp: boolean) => void) {
       onViewModeChange = cb;

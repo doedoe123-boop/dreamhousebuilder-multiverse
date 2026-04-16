@@ -86,6 +86,60 @@ function createStylizedWorker(colors: {
   nose.position.set(0, -0.02, 0.2);
   head.add(nose);
 
+  // Eyes
+  const eyeMat = new THREE.MeshStandardMaterial({
+    color: "#1a1a1a",
+    roughness: 0.3,
+  });
+  const eyeWhiteMat = new THREE.MeshStandardMaterial({
+    color: "#f5f5f0",
+    roughness: 0.4,
+  });
+  const eyeGeo = new THREE.SphereGeometry(0.032, 10, 8);
+  const eyeWhiteGeo = new THREE.SphereGeometry(0.055, 10, 8);
+
+  const leftEyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+  leftEyeWhite.position.set(-0.075, 0.03, 0.17);
+  leftEyeWhite.scale.z = 0.6;
+  head.add(leftEyeWhite);
+
+  const rightEyeWhite = new THREE.Mesh(
+    eyeWhiteGeo.clone(),
+    eyeWhiteMat.clone(),
+  );
+  rightEyeWhite.position.set(0.075, 0.03, 0.17);
+  rightEyeWhite.scale.z = 0.6;
+  head.add(rightEyeWhite);
+
+  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+  leftEye.position.set(-0.075, 0.03, 0.2);
+  head.add(leftEye);
+
+  const rightEye = new THREE.Mesh(eyeGeo.clone(), eyeMat.clone());
+  rightEye.position.set(0.075, 0.03, 0.2);
+  head.add(rightEye);
+
+  // Eyebrows
+  const browMat = new THREE.MeshStandardMaterial({
+    color: "#3d2b1a",
+    roughness: 0.9,
+  });
+  const leftBrow = new THREE.Mesh(
+    new THREE.BoxGeometry(0.08, 0.018, 0.03),
+    browMat,
+  );
+  leftBrow.position.set(-0.075, 0.075, 0.18);
+  leftBrow.rotation.z = 0.1;
+  head.add(leftBrow);
+
+  const rightBrow = new THREE.Mesh(
+    new THREE.BoxGeometry(0.08, 0.018, 0.03),
+    browMat.clone(),
+  );
+  rightBrow.position.set(0.075, 0.075, 0.18);
+  rightBrow.rotation.z = -0.1;
+  head.add(rightBrow);
+
   const helmetBrim = new THREE.Mesh(
     new THREE.CylinderGeometry(0.28, 0.28, 0.05, 20),
     new THREE.MeshStandardMaterial({ color: colors.helmet, roughness: 0.7 }),
@@ -175,7 +229,10 @@ function createStylizedWorker(colors: {
   const leftLeg = new THREE.Mesh(legGeometry, upperLegMaterial);
   leftLeg.position.y = -0.24;
   leftLegPivot.add(leftLeg);
-  const rightLeg = new THREE.Mesh(legGeometry.clone(), upperLegMaterial.clone());
+  const rightLeg = new THREE.Mesh(
+    legGeometry.clone(),
+    upperLegMaterial.clone(),
+  );
   rightLeg.position.y = -0.24;
   rightLegPivot.add(rightLeg);
 
@@ -287,6 +344,7 @@ export type ForemanNPC = {
   group: THREE.Group;
   update(playerPosition: THREE.Vector3, dt: number): void;
   setDialogue(text: string): void;
+  setTalking(talking: boolean): void;
 };
 
 export function createForemanCabin(): THREE.Group {
@@ -507,7 +565,7 @@ export function createForemanNPC(): ForemanNPC {
 
   const bubbleCanvas = document.createElement("canvas");
   bubbleCanvas.width = 512;
-  bubbleCanvas.height = 128;
+  bubbleCanvas.height = 256;
   const ctx = bubbleCanvas.getContext("2d")!;
   const bubbleTexture = new THREE.CanvasTexture(bubbleCanvas);
   const spriteMat = new THREE.SpriteMaterial({
@@ -515,16 +573,17 @@ export function createForemanNPC(): ForemanNPC {
     transparent: true,
   });
   const sprite = new THREE.Sprite(spriteMat);
-  sprite.scale.set(4.2, 1.1, 1);
-  sprite.position.y = 2.35;
+  sprite.scale.set(3.6, 1.8, 1);
+  sprite.position.set(0, 3.2, 0.8);
   sprite.visible = false;
   group.add(sprite);
 
   let currentText = "";
   let playerNearby = false;
+  let isTalking = false;
 
   function drawBubble(text: string) {
-    ctx.clearRect(0, 0, 512, 128);
+    ctx.clearRect(0, 0, 512, 256);
     if (!text) {
       sprite.visible = false;
       return;
@@ -532,7 +591,7 @@ export function createForemanNPC(): ForemanNPC {
 
     ctx.fillStyle = "rgba(255, 251, 244, 0.96)";
     ctx.beginPath();
-    ctx.roundRect(4, 4, 504, 100, 18);
+    ctx.roundRect(6, 6, 500, 218, 20);
     ctx.fill();
     ctx.strokeStyle = "#d58b39";
     ctx.lineWidth = 3;
@@ -540,13 +599,13 @@ export function createForemanNPC(): ForemanNPC {
 
     ctx.fillStyle = "rgba(255, 251, 244, 0.96)";
     ctx.beginPath();
-    ctx.moveTo(238, 104);
-    ctx.lineTo(256, 124);
-    ctx.lineTo(274, 104);
+    ctx.moveTo(238, 224);
+    ctx.lineTo(256, 250);
+    ctx.lineTo(274, 224);
     ctx.fill();
 
     ctx.fillStyle = "#43362a";
-    ctx.font = "600 22px sans-serif";
+    ctx.font = "600 20px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
@@ -564,9 +623,11 @@ export function createForemanNPC(): ForemanNPC {
     }
     if (line) lines.push(line);
 
-    const lineHeight = 25;
-    const startY = 50 - ((lines.length - 1) * lineHeight) / 2;
-    lines.forEach((value, index) => {
+    const lineHeight = 26;
+    const maxLines = 8;
+    const displayLines = lines.slice(0, maxLines);
+    const startY = 116 - ((displayLines.length - 1) * lineHeight) / 2;
+    displayLines.forEach((value, index) => {
       ctx.fillText(value, 256, startY + index * lineHeight);
     });
 
@@ -597,12 +658,35 @@ export function createForemanNPC(): ForemanNPC {
       group.rotation.y += delta * Math.min(1, dt * 4.5);
     }
 
-    const sway = Math.sin(performance.now() * 0.003) * 0.05;
-    worker.leftLegPivot.rotation.x = sway;
-    worker.rightLegPivot.rotation.x = -sway;
-    worker.leftArmPivot.rotation.x = -sway * 0.45;
-    worker.rightArmPivot.rotation.x = sway * 0.35;
-    worker.head.rotation.y = Math.sin(performance.now() * 0.0014) * 0.08;
+    const now = performance.now();
+
+    if (isTalking && playerNearby) {
+      // Talking gestures — animated arm movement and head nods
+      const talkCycle = now * 0.004;
+      // Left arm gestures (the free hand)
+      worker.leftArmPivot.rotation.x = Math.sin(talkCycle) * 0.35 - 0.3;
+      worker.leftArmPivot.rotation.z = Math.sin(talkCycle * 0.7) * 0.15 + 0.2;
+      // Right arm holds clipboard, slight emphasis gesture
+      worker.rightArmPivot.rotation.x = Math.sin(talkCycle * 0.5) * 0.12 - 0.15;
+      // Head nods and tilts while talking
+      worker.head.rotation.x = Math.sin(talkCycle * 1.3) * 0.06;
+      worker.head.rotation.y = Math.sin(talkCycle * 0.6) * 0.1;
+      worker.head.rotation.z = Math.sin(talkCycle * 0.8) * 0.04;
+      // Slight body lean forward
+      worker.leftLegPivot.rotation.x = Math.sin(talkCycle * 0.3) * 0.03;
+      worker.rightLegPivot.rotation.x = -Math.sin(talkCycle * 0.3) * 0.03;
+    } else {
+      // Idle sway
+      const sway = Math.sin(now * 0.003) * 0.05;
+      worker.leftLegPivot.rotation.x = sway;
+      worker.rightLegPivot.rotation.x = -sway;
+      worker.leftArmPivot.rotation.x = -sway * 0.45;
+      worker.leftArmPivot.rotation.z *= 0.9; // ease back to neutral
+      worker.rightArmPivot.rotation.x = sway * 0.35;
+      worker.head.rotation.x *= 0.9;
+      worker.head.rotation.y = Math.sin(now * 0.0014) * 0.08;
+      worker.head.rotation.z *= 0.9;
+    }
   }
 
   function setDialogue(text: string) {
@@ -611,5 +695,9 @@ export function createForemanNPC(): ForemanNPC {
     drawBubble(text);
   }
 
-  return { group, update, setDialogue };
+  function setTalking(talking: boolean) {
+    isTalking = talking;
+  }
+
+  return { group, update, setDialogue, setTalking };
 }

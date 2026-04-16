@@ -20,6 +20,13 @@ export function setupWorldEnvironment(
   directionalLight.position.set(26, 34, 18);
   directionalLight.castShadow = true;
   directionalLight.shadow.mapSize.set(2048, 2048);
+  directionalLight.shadow.camera.left = -60;
+  directionalLight.shadow.camera.right = 60;
+  directionalLight.shadow.camera.top = 60;
+  directionalLight.shadow.camera.bottom = -60;
+  directionalLight.shadow.camera.near = 0.5;
+  directionalLight.shadow.camera.far = 120;
+  directionalLight.shadow.bias = -0.001;
   scene.add(directionalLight);
 
   const rimLight = new THREE.DirectionalLight("#d4e3ff", 0.42);
@@ -62,7 +69,9 @@ export function setupWorldEnvironment(
     const z = posAttr.getZ(i);
     const distFromCenter = Math.sqrt(x * x + z * z);
     const flatRadius = 78;
-    const hillFactor = Math.max(0, (distFromCenter - flatRadius) / 110);
+    const transitionWidth = 110;
+    const rawT = Math.max(0, (distFromCenter - flatRadius) / transitionWidth);
+    const hillFactor = rawT * rawT * (3 - 2 * rawT); // smoothstep
     const height =
       hillFactor *
       (Math.sin(x * 0.018) * 1.6 +
@@ -87,10 +96,7 @@ export function setupWorldEnvironment(
     terrainColors[i * 3 + 1] = tempColor.g;
     terrainColors[i * 3 + 2] = tempColor.b;
   }
-  terrainGeo.setAttribute(
-    "color",
-    new THREE.BufferAttribute(terrainColors, 3),
-  );
+  terrainGeo.setAttribute("color", new THREE.BufferAttribute(terrainColors, 3));
   const terrainMat = new THREE.MeshStandardMaterial({
     vertexColors: true,
     roughness: 0.97,
@@ -107,6 +113,11 @@ export function setupWorldEnvironment(
     side: THREE.DoubleSide,
     roughness: 1,
   });
+  const grassColors = [
+    new THREE.Color("#6f9d52"),
+    new THREE.Color("#5a8a3e"),
+    new THREE.Color("#7db560"),
+  ];
   const grassCount = 1400;
   const grass = new THREE.InstancedMesh(
     grassBladeGeometry,
@@ -119,21 +130,28 @@ export function setupWorldEnvironment(
     const x = (Math.random() - 0.5) * 320;
     const z = (Math.random() - 0.5) * 320;
     if (Math.sqrt(x * x + z * z) < 78) continue;
+    const dist = Math.sqrt(x * x + z * z);
+    const rawGrassT = Math.max(0, (dist - 78) / 110);
+    const grassHillFactor = rawGrassT * rawGrassT * (3 - 2 * rawGrassT);
     const baseHeight =
-      Math.max(0, (Math.sqrt(x * x + z * z) - 78) / 110) *
+      grassHillFactor *
         (Math.sin(x * 0.018) * 1.6 +
           Math.cos(z * 0.028) * 1.2 +
           Math.sin((x + z) * 0.014) * 1.8) -
       0.18;
     grassDummy.position.set(x, Math.min(baseHeight, 9), z);
     grassDummy.rotation.y = Math.random() * Math.PI;
+    grassDummy.rotation.x = (Math.random() - 0.5) * 0.3;
+    grassDummy.rotation.z = (Math.random() - 0.5) * 0.25;
     const grassScale = 0.85 + Math.random() * 0.8;
     grassDummy.scale.setScalar(grassScale);
     grassDummy.updateMatrix();
     grass.setMatrixAt(grassIndex, grassDummy.matrix);
+    grass.setColorAt(grassIndex, grassColors[grassIndex % 3]);
     grassIndex += 1;
   }
   grass.instanceMatrix.needsUpdate = true;
+  if (grass.instanceColor) grass.instanceColor.needsUpdate = true;
   scene.add(grass);
 
   const constructionRing = new THREE.Mesh(
@@ -180,7 +198,125 @@ export function setupWorldEnvironment(
     scene.add(hill);
   });
 
+  // ── Trees and bushes around the perimeter ──
+  buildTrees(scene);
+  buildBushes(scene);
+
   scene.background = null;
 
   return { skyDome };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Trees — simple cone + cylinder scattered around the perimeter      */
+/* ------------------------------------------------------------------ */
+
+function getTerrainHeight(x: number, z: number): number {
+  const dist = Math.sqrt(x * x + z * z);
+  const flatRadius = 78;
+  const rawT = Math.max(0, (dist - flatRadius) / 110);
+  const hillFactor = rawT * rawT * (3 - 2 * rawT);
+  const height =
+    hillFactor *
+    (Math.sin(x * 0.018) * 1.6 +
+      Math.cos(z * 0.028) * 1.2 +
+      Math.sin((x + z) * 0.014) * 1.8);
+  return Math.min(height, 9) - 0.22;
+}
+
+function buildTrees(scene: THREE.Scene) {
+  const trunkGeometry = new THREE.CylinderGeometry(0.18, 0.24, 2.2, 8);
+  const trunkMaterial = new THREE.MeshStandardMaterial({
+    color: "#6b4c30",
+    roughness: 0.95,
+  });
+
+  const foliageColors = ["#3d7a2e", "#4a8c38", "#2f6b24"];
+
+  const treePositions: { x: number; z: number; scale: number }[] = [];
+
+  // Seed a deterministic-looking spread using a simple hash
+  const seed = (n: number) =>
+    (((Math.sin(n * 127.1 + 311.7) * 43758.5453) % 1) + 1) % 1;
+
+  for (let i = 0; i < 55; i++) {
+    const angle = seed(i) * Math.PI * 2;
+    const radius = 95 + seed(i + 100) * 140;
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+    const scale = 0.8 + seed(i + 200) * 0.9;
+    treePositions.push({ x, z, scale });
+  }
+
+  treePositions.forEach(({ x, z, scale }, i) => {
+    const treeGroup = new THREE.Group();
+    const y = getTerrainHeight(x, z);
+
+    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial.clone());
+    trunk.position.y = 1.1 * scale;
+    trunk.scale.setScalar(scale);
+    trunk.castShadow = true;
+    treeGroup.add(trunk);
+
+    const foliageColor = foliageColors[i % foliageColors.length];
+    const foliageMat = new THREE.MeshStandardMaterial({
+      color: foliageColor,
+      roughness: 0.9,
+    });
+
+    // Two stacked cones for a fuller look
+    const lowerCone = new THREE.Mesh(
+      new THREE.ConeGeometry(1.8 * scale, 2.8 * scale, 7),
+      foliageMat,
+    );
+    lowerCone.position.y = 2.6 * scale;
+    lowerCone.castShadow = true;
+    treeGroup.add(lowerCone);
+
+    const upperCone = new THREE.Mesh(
+      new THREE.ConeGeometry(1.2 * scale, 2.2 * scale, 7),
+      foliageMat.clone(),
+    );
+    upperCone.position.y = 4.2 * scale;
+    upperCone.castShadow = true;
+    treeGroup.add(upperCone);
+
+    treeGroup.position.set(x, y, z);
+    treeGroup.rotation.y = seed(i + 300) * Math.PI * 2;
+    scene.add(treeGroup);
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/*  Bushes — low rounded shapes near the tree line                     */
+/* ------------------------------------------------------------------ */
+
+function buildBushes(scene: THREE.Scene) {
+  const bushColors = ["#4e8a3a", "#3a7530", "#5c9945"];
+
+  const seed = (n: number) =>
+    (((Math.sin(n * 78.233 + 142.1) * 29837.123) % 1) + 1) % 1;
+
+  for (let i = 0; i < 80; i++) {
+    const angle = seed(i) * Math.PI * 2;
+    const radius = 82 + seed(i + 50) * 120;
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+    const y = getTerrainHeight(x, z);
+
+    const scaleX = 0.6 + seed(i + 100) * 0.8;
+    const scaleY = 0.4 + seed(i + 150) * 0.5;
+    const scaleZ = 0.6 + seed(i + 200) * 0.8;
+
+    const bushMat = new THREE.MeshStandardMaterial({
+      color: bushColors[i % bushColors.length],
+      roughness: 0.95,
+    });
+
+    const bush = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), bushMat);
+    bush.scale.set(scaleX, scaleY, scaleZ);
+    bush.position.set(x, y + scaleY * 0.5, z);
+    bush.castShadow = true;
+    scene.add(bush);
+  }
 }

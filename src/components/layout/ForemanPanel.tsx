@@ -7,17 +7,7 @@ type ForemanPanelProps = {
   isTalkingToForeman: boolean;
   foremanTopic: ForemanTopic;
   foremanStageLabel: string;
-  foremanTone: string;
-  foremanDialogue: string;
-  foremanSmallTalk: string;
-  foremanSuggestedStep: string;
   foremanSuggestedTool: ToolMode | null;
-  foremanStuckAdvice: string;
-  foremanSimpleExplanation: string;
-  foremanIdeas: string;
-  foremanMemoryReflection: string | null;
-  foremanWhyThisMatters: string;
-  foremanWhatComesAfter: string;
   onSetTopic: (topic: ForemanTopic) => void;
   onShowSuggestedTool: () => void;
   onInspectMode: () => void;
@@ -49,17 +39,7 @@ export function ForemanPanel({
   isTalkingToForeman,
   foremanTopic,
   foremanStageLabel,
-  foremanTone,
-  foremanDialogue,
-  foremanSmallTalk,
-  foremanSuggestedStep,
   foremanSuggestedTool,
-  foremanStuckAdvice,
-  foremanSimpleExplanation,
-  foremanIdeas,
-  foremanMemoryReflection,
-  foremanWhyThisMatters,
-  foremanWhatComesAfter,
   onSetTopic,
   onShowSuggestedTool,
   onInspectMode,
@@ -84,115 +64,71 @@ export function ForemanPanel({
       </div>
 
       {isTalkingToForeman && (
-        <div className="floating-foreman-chat">
-          <div className="floating-foreman-chat__eyebrow">Foreman Cabin</div>
-          <div className="floating-foreman-chat__header">
-            <div className="floating-foreman-chat__title">Foreman Elias</div>
-            <div className="floating-foreman-chat__badge">
+        <div className="floating-foreman-actions">
+          <div className="floating-foreman-actions__header">
+            <span className="floating-foreman-actions__name">
+              Foreman Elias
+            </span>
+            <span className="floating-foreman-actions__badge">
               {foremanStageLabel}
-            </div>
+            </span>
           </div>
-          <div className="floating-foreman-chat__tone">{foremanTone}</div>
-
-          <div className="floating-foreman-chat__section">
-            <div className="floating-foreman-chat__label">What he says</div>
-            <p>{foremanDialogue}</p>
-          </div>
-
-          <div className="floating-foreman-chat__section">
-            <div className="floating-foreman-chat__label">Ask Elias</div>
-            <div className="floating-foreman-chat__actions floating-foreman-chat__actions--compact">
+          <div className="floating-foreman-actions__buttons">
+            <button
+              type="button"
+              className={
+                "floating-tool floating-foreman-actions__btn" +
+                (foremanTopic === "stuck" ? " is-active" : "")
+              }
+              onClick={() =>
+                onSetTopic(foremanTopic === "stuck" ? null : "stuck")
+              }
+            >
+              I'm stuck
+            </button>
+            <button
+              type="button"
+              className={
+                "floating-tool floating-foreman-actions__btn" +
+                (foremanTopic === "simple" ? " is-active" : "")
+              }
+              onClick={() =>
+                onSetTopic(foremanTopic === "simple" ? null : "simple")
+              }
+            >
+              Explain simply
+            </button>
+            <button
+              type="button"
+              className={
+                "floating-tool floating-foreman-actions__btn" +
+                (foremanTopic === "ideas" ? " is-active" : "")
+              }
+              onClick={() =>
+                onSetTopic(foremanTopic === "ideas" ? null : "ideas")
+              }
+            >
+              Ideas
+            </button>
+            {foremanSuggestedTool && (
               <button
                 type="button"
-                className={
-                  "floating-tool floating-tool--wide floating-foreman-chat__action" +
-                  (foremanTopic === "stuck" ? " is-active" : "")
-                }
-                onClick={() => onSetTopic("stuck")}
+                className="floating-tool floating-foreman-actions__btn"
+                onClick={onShowSuggestedTool}
               >
-                I'm stuck
+                {getToolLabel(foremanSuggestedTool)} tool
               </button>
-              <button
-                type="button"
-                className={
-                  "floating-tool floating-tool--wide floating-foreman-chat__action" +
-                  (foremanTopic === "simple" ? " is-active" : "")
-                }
-                onClick={() => onSetTopic("simple")}
-              >
-                Explain this simply
-              </button>
-              <button
-                type="button"
-                className={
-                  "floating-tool floating-tool--wide floating-foreman-chat__action" +
-                  (foremanTopic === "ideas" ? " is-active" : "")
-                }
-                onClick={() => onSetTopic("ideas")}
-              >
-                Give me ideas
-              </button>
-            </div>
-            {foremanTopic === "stuck" && (
-              <p className="floating-foreman-chat__reply">{foremanStuckAdvice}</p>
             )}
-            {foremanTopic === "simple" && (
-              <p className="floating-foreman-chat__reply">
-                {foremanSimpleExplanation}
-              </p>
-            )}
-            {foremanTopic === "ideas" && (
-              <p className="floating-foreman-chat__reply">{foremanIdeas}</p>
-            )}
+            <button
+              type="button"
+              className="floating-tool floating-foreman-actions__btn"
+              onClick={onInspectMode}
+            >
+              Inspect
+            </button>
           </div>
-
-          <div className="floating-foreman-chat__section">
-            <div className="floating-foreman-chat__label">Small talk</div>
-            <p>{foremanSmallTalk}</p>
-          </div>
-
-          <div className="floating-foreman-chat__section">
-            <div className="floating-foreman-chat__label">
-              Recommended next step
-            </div>
-            <p>{foremanSuggestedStep}</p>
-            <div className="floating-foreman-chat__actions">
-              {foremanSuggestedTool && (
-                <button
-                  type="button"
-                  className="floating-tool floating-tool--wide floating-foreman-chat__action"
-                  onClick={onShowSuggestedTool}
-                >
-                  Show me the {getToolLabel(foremanSuggestedTool)} tool
-                </button>
-              )}
-              <button
-                type="button"
-                className="floating-tool floating-tool--wide floating-foreman-chat__action"
-                onClick={onInspectMode}
-              >
-                Take me to inspect mode
-              </button>
-            </div>
-          </div>
-
-          {foremanMemoryReflection && (
-            <div className="floating-foreman-chat__section">
-              <div className="floating-foreman-chat__label">
-                What Elias remembers
-              </div>
-              <p>{foremanMemoryReflection}</p>
-            </div>
-          )}
-
-          <div className="floating-foreman-chat__section">
-            <div className="floating-foreman-chat__label">Why this matters</div>
-            <p>{foremanWhyThisMatters}</p>
-          </div>
-
-          <div className="floating-foreman-chat__section">
-            <div className="floating-foreman-chat__label">What comes after</div>
-            <p>{foremanWhatComesAfter}</p>
+          <div className="floating-foreman-actions__hint">
+            Press <kbd>E</kbd> or <kbd>Esc</kbd> to close
           </div>
         </div>
       )}

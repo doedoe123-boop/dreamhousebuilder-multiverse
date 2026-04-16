@@ -256,6 +256,22 @@ function App() {
     return null;
   }, [world]);
 
+  // The active text shown in the foreman's 3D speech bubble
+  const foremanBubbleText = useMemo(() => {
+    if (!isTalkingToForeman) return foremanDialogue;
+    if (foremanTopic === "stuck") return foremanStuckAdvice;
+    if (foremanTopic === "simple") return foremanSimpleExplanation;
+    if (foremanTopic === "ideas") return foremanIdeas;
+    return foremanDialogue;
+  }, [
+    isTalkingToForeman,
+    foremanTopic,
+    foremanDialogue,
+    foremanStuckAdvice,
+    foremanSimpleExplanation,
+    foremanIdeas,
+  ]);
+
   return (
     <main className="app-shell">
       <section className="editor-panel">
@@ -412,44 +428,34 @@ function App() {
                 currentFloor={currentFloor}
                 onSetFloor={setCurrentFloor}
               />
-              <ForemanPanel
-                isNearForeman={isNearForeman}
-                isTalkingToForeman={isTalkingToForeman}
-                foremanTopic={foremanTopic}
-                foremanStageLabel={foremanStageLabel}
-                foremanTone={foremanTone}
-                foremanDialogue={foremanDialogue}
-                foremanSmallTalk={foremanSmallTalk}
-                foremanSuggestedStep={foremanSuggestedStep}
-                foremanSuggestedTool={foremanSuggestedTool}
-                foremanStuckAdvice={foremanStuckAdvice}
-                foremanSimpleExplanation={foremanSimpleExplanation}
-                foremanIdeas={foremanIdeas}
-                foremanMemoryReflection={foremanMemoryReflection}
-                foremanWhyThisMatters={foremanWhyThisMatters}
-                foremanWhatComesAfter={foremanWhatComesAfter}
-                onSetTopic={setForemanTopic}
-                onShowSuggestedTool={() => {
-                  if (!foremanSuggestedTool) return;
-                  handleSetTool(foremanSuggestedTool);
-                  setForemanMemoryEvent("followed-advice");
-                  setForemanTopic(null);
-                  setStatusMessage(
-                    `Foreman Elias switched you to the ${foremanSuggestedTool} tool.`,
-                  );
-                }}
-                onInspectMode={() => {
-                  setCurrentTool("select");
-                  setSelectedObject(null);
-                  setForemanMemoryEvent("followed-advice");
-                  setForemanTopic(null);
-                  setStatusMessage(
-                    "Foreman Elias switched you back to inspect mode.",
-                  );
-                }}
-              />
             </>
           )}
+          <ForemanPanel
+            isNearForeman={isNearForeman}
+            isTalkingToForeman={isTalkingToForeman}
+            foremanTopic={foremanTopic}
+            foremanStageLabel={foremanStageLabel}
+            foremanSuggestedTool={foremanSuggestedTool}
+            onSetTopic={setForemanTopic}
+            onShowSuggestedTool={() => {
+              if (!foremanSuggestedTool) return;
+              handleSetTool(foremanSuggestedTool);
+              setForemanMemoryEvent("followed-advice");
+              setForemanTopic(null);
+              setStatusMessage(
+                `Foreman Elias switched you to the ${foremanSuggestedTool} tool.`,
+              );
+            }}
+            onInspectMode={() => {
+              setCurrentTool("select");
+              setSelectedObject(null);
+              setForemanMemoryEvent("followed-advice");
+              setForemanTopic(null);
+              setStatusMessage(
+                "Foreman Elias switched you back to inspect mode.",
+              );
+            }}
+          />
           {!isFirstPerson && !uiVisible && (
             <div className="floating-hint">
               Press <kbd>H</kbd> to show UI
@@ -459,7 +465,8 @@ function App() {
             world={world}
             currentTool={currentTool}
             currentFurnitureType={currentFurnitureType}
-            foremanDialogue={foremanDialogue}
+            foremanDialogue={foremanBubbleText}
+            isTalkingToForeman={isTalkingToForeman}
             onPlacePillar={placePillar}
             onPlaceFoundation={placeFoundation}
             onPlaceWall={placeWall}

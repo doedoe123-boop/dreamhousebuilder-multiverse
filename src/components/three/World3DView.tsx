@@ -12,6 +12,7 @@ type World3DViewProps = {
   currentTool: ToolMode;
   currentFurnitureType?: FurnitureType;
   foremanDialogue?: string;
+  isTalkingToForeman?: boolean;
   onSelectionChange?: (selection: SelectedObject) => void;
   onPlaceFoundation?: (x: number, y: number) => void;
   onPlacePillar?: (x: number, y: number) => void;
@@ -31,6 +32,7 @@ export function World3DView({
   currentTool,
   currentFurnitureType,
   foremanDialogue,
+  isTalkingToForeman,
   onSelectionChange,
   onPlaceFoundation,
   onPlacePillar,
@@ -106,6 +108,10 @@ export function World3DView({
       rendererRef.current?.setForemanDialogue(foremanDialogue);
     }
   }, [foremanDialogue]);
+
+  useEffect(() => {
+    rendererRef.current?.setForemanTalking(!!isTalkingToForeman);
+  }, [isTalkingToForeman]);
 
   useEffect(() => {
     if (onViewModeChange) {

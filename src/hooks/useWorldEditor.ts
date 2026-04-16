@@ -32,7 +32,7 @@ export function useWorldEditor() {
   const worldHistoryRef = useRef<World[]>([]);
   const [canUndo, setCanUndo] = useState(false);
   const [selectedObject, setSelectedObject] = useState<SelectedObject>(null);
-  const [currentTool, setCurrentTool] = useState<ToolMode>("foundation");
+  const [currentTool, setCurrentTool] = useState<ToolMode>("select");
   const [currentMaterial, setCurrentMaterial] =
     useState<StructuralMaterial>("wood");
   const [currentFurnitureType, setCurrentFurnitureType] =
