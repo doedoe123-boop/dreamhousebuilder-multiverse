@@ -1,133 +1,151 @@
-# 🤖 AGENTS.md — Dream House Builder
+# AGENTS.md — Dream House Builder
 
-## 🧠 Project Overview
-This is a web-based Dream House Builder MVP.
+## Project Overview
+Dream House Builder is currently a web-based, local-first, 3D house-construction builder.
 
 Users can:
-- Create and edit a 2D house layout
-- Add rooms and furniture
-- Drag, move, and delete objects
-- Save and load their designs locally
+- place structural elements such as pillars and walls
+- add doors, windows, steel bars, roofs, and furniture
+- paint supported surfaces
+- inspect, delete, undo, and save/load their project locally
+- follow a guided build flow while working in 3D
 
-Long-term vision includes:
-- Online sharing of houses
-- Visiting other users’ houses
-- Multiplayer interaction
-- 3D visualization
+Long-term vision may still include sharing, online persistence, and multiplayer, but the current product is a standalone browser-based builder.
 
 ---
 
-## 🎯 MVP Focus (VERY IMPORTANT)
-Agents MUST prioritize simplicity and working functionality.
+## Product Focus
+Agents must prioritize:
+- a stable 3D-first build workflow
+- predictable tool behavior
+- simple local persistence
+- beginner-friendly guidance
 
-Do NOT over-engineer.
+Do not over-engineer.
 
-The MVP is only:
-- Canvas-based editor
-- Rooms + furniture objects
-- Drag & drop interactions
-- Local save/load
-
-No backend, no auth, no multiplayer, no 3D.
+Current priority is not feature sprawl. Current priority is making the existing house-building workflow dependable and understandable.
 
 ---
 
-## ⚙️ Tech Stack Rules
+## Active Scope
+The active app includes:
+- 3D world rendering and interaction
+- floating tool panels
+- structural tools
+- furnishing and paint tools
+- guide/dialogue support
+- local save/load
+- undo and basic editing behavior
+
+No backend, no auth, no cloud storage, and no multiplayer in the current phase.
+
+---
+
+## Tech Stack Rules
 - React frontend only
-- Konva.js for all canvas rendering
 - TypeScript preferred for structure
+- Three.js is the active rendering layer
 - LocalStorage for persistence
+
+Legacy Konva/2D code may still exist in the repo, but it is not the primary product direction.
 
 Avoid introducing unnecessary libraries unless explicitly required.
 
 ---
 
-## 🧱 Architecture Principles
+## Architecture Principles
 
-### 1. Keep state simple
-- House = list of rooms + furniture objects
-- Use plain JSON structures
+### 1. Keep state centralized
+- The app should use a single `world` source of truth
+- All tools should read from and write to the same world object
 
-### 2. Canvas-first design
-- All visual elements must be rendered via Konva
-- No DOM-based positioning for objects
+### 2. UI reflects the world
+- Rendering layers should reflect world state, not invent parallel object state
+- Placement previews and ghosts can be temporary, but persisted objects must come from the world model
 
 ### 3. Minimal abstraction
-- Avoid over-engineering services, layers, or frameworks
 - Prefer direct, readable logic
+- Split code only when it clearly improves maintainability
 
-### 4. Single responsibility components
-- Canvas renders objects
-- Toolbar triggers actions
-- State logic is centralized
-
----
-
-## 🧠 Data Model Guideline
-All objects should follow simple shape-based models:
-
-- Rooms: id, x, y, width, height, name
-- Furniture: id, type, x, y
-
-No complex nesting or unnecessary metadata.
+### 4. Tool-driven interaction
+- Tools control interaction mode
+- Only one active tool at a time
+- Tool behavior should be consistent across placement, selection, deletion, and save/load
 
 ---
 
-## 🎮 Interaction Rules
+## Data Model Guideline
+The current world may include:
+- foundation
+- walls
+- pillars
+- doors
+- windows
+- steel bars
+- roofs
+- furniture
 
+Useful supported attributes include:
+- structural material
+- floor
+- color
+
+Avoid unnecessary nesting and metadata unless it clearly supports current builder behavior.
+
+---
+
+## Interaction Rules
 Agents should ensure:
-- Objects are draggable
-- Selected object can be deleted
-- New objects are added via toolbar actions
-- UI feedback is immediate and responsive
+- object placement is immediate and understandable
+- selection is visually obvious
+- delete and undo work reliably
+- guide messaging helps non-experts understand what to do next
+- camera and movement controls do not fight the user
 
 ---
 
-## 💾 Persistence Rules
-- Save full house state to LocalStorage
-- Load restores exact previous state
-- No backend or cloud storage in MVP
+## Persistence Rules
+- Save the full world state to LocalStorage
+- Load restores the exact project shape through normalization
+- Maintain backward compatibility where practical for older saved layouts
+- No backend or cloud storage in the current phase
 
 ---
 
-## 🚫 Explicitly Forbidden (for MVP)
-- No multiplayer logic
-- No authentication system
-- No database integration
-- No 3D rendering
-- No Redux / heavy state frameworks
-- No excessive folder abstraction
+## Explicitly Out Of Scope
+- Multiplayer logic
+- Authentication
+- Database or API integration
+- Cloud save
+- Heavy state frameworks unless explicitly requested
 
 ---
 
-## 🧭 Coding Style
-
+## Coding Style
 - Prefer simple functional components
-- Keep logic readable over “clever”
+- Keep logic readable over clever
 - Avoid premature optimization
-- Use TypeScript types only where helpful
-- Keep files small and focused
+- Use types where they improve clarity
+- Keep files focused and reasonably small
 
 ---
 
-## 🤖 AI Agent Behavior Guidelines
-
+## AI Agent Behavior Guidelines
 When making changes:
 
-1. Prefer working code over perfect architecture
-2. Keep changes minimal and localized
+1. Prefer working, stable tool behavior over ambitious new systems
+2. Keep changes localized when possible
 3. Do not refactor unrelated code
-4. Do not introduce new libraries unless necessary
-5. Preserve MVP simplicity at all times
+4. Do not introduce unnecessary libraries
+5. Keep docs aligned with the real product state
+6. Treat beginner usability as a first-class concern
 
 ---
 
-## 🚀 Definition of Done (MVP)
-The project is complete when:
-- A user can open the app
-- Add rooms and furniture visually
-- Drag and rearrange objects
-- Save and reload the layout successfully
-- Everything runs smoothly in the browser
-
----
+## Definition Of Done For The Current Phase
+The current phase is successful when:
+- a user can open the app and understand the builder flow
+- core 3D tools work reliably
+- guide and dialogue support the build sequence
+- save/load and undo are dependable
+- the app feels like a usable dream-house construction prototype
