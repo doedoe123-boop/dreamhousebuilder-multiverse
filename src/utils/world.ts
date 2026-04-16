@@ -31,6 +31,10 @@ type LegacyRoom = {
 export function normalizeFoundation(
   item: Partial<Foundation> | null | undefined,
 ) {
+  if (!item) {
+    return null;
+  }
+
   const normalized: Foundation = {
     x: typeof item?.x === "number" ? item.x : DEFAULT_FOUNDATION.x,
     y: typeof item?.y === "number" ? item.y : DEFAULT_FOUNDATION.y,

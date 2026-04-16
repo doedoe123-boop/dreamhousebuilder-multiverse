@@ -20,6 +20,13 @@ type FoundationBounds = {
   maxZ: number;
 };
 
+const DEFAULT_OPEN_WORLD_BOUNDS: FoundationBounds = {
+  minX: -120,
+  maxX: 120,
+  minZ: -120,
+  maxZ: 120,
+};
+
 export function buildWorldMeshes(
   worldRoot: THREE.Group,
   world: World,
@@ -28,35 +35,59 @@ export function buildWorldMeshes(
   const floorY = (floor: number) =>
     toSceneUnits((floor || 0) * FLOOR_HEIGHT_PX);
 
-  const foundationBounds: FoundationBounds = {
-    minX: toSceneUnits(world.foundation.x),
-    maxX: toSceneUnits(world.foundation.x + world.foundation.width),
-    minZ: toSceneUnits(world.foundation.y),
-    maxZ: toSceneUnits(world.foundation.y + world.foundation.height),
-  };
+  const foundationBounds: FoundationBounds = world.foundation
+    ? {
+        minX: toSceneUnits(world.foundation.x),
+        maxX: toSceneUnits(world.foundation.x + world.foundation.width),
+        minZ: toSceneUnits(world.foundation.y),
+        maxZ: toSceneUnits(world.foundation.y + world.foundation.height),
+      }
+    : DEFAULT_OPEN_WORLD_BOUNDS;
 
   // ── Foundation ──
-  const foundationGeometry = new THREE.BoxGeometry(
-    scene3d.foundation.width,
-    scene3d.foundation.thickness,
-    scene3d.foundation.depth,
-  );
-  const foundationMaterial = new THREE.MeshStandardMaterial({
-    color: world.foundation.color || "#cab89b",
-  });
-  const foundationMesh = new THREE.Mesh(foundationGeometry, foundationMaterial);
-  foundationMesh.position.set(
-    scene3d.foundation.position.x,
-    scene3d.foundation.position.y - scene3d.foundation.thickness / 2,
-    scene3d.foundation.position.z,
-  );
-  foundationMesh.userData = {
-    foundation: true,
-    selectable: true,
-    kind: "foundation",
-    id: "foundation",
-  } satisfies SelectableUserData & { foundation: true };
-  worldRoot.add(foundationMesh);
+  if (scene3d.foundation && world.foundation) {
+    const foundationGeometry = new THREE.BoxGeometry(
+      scene3d.foundation.width,
+      scene3d.foundation.thickness,
+      scene3d.foundation.depth,
+    );
+    const foundationMaterial = new THREE.MeshStandardMaterial({
+      color: world.foundation.color || "#bea888",
+      roughness: 0.9,
+    });
+    const foundationMesh = new THREE.Mesh(
+      foundationGeometry,
+      foundationMaterial,
+    );
+    foundationMesh.position.set(
+      scene3d.foundation.position.x,
+      scene3d.foundation.position.y - scene3d.foundation.thickness / 2,
+      scene3d.foundation.position.z,
+    );
+    foundationMesh.userData = {
+      foundation: true,
+      selectable: true,
+      kind: "foundation",
+      id: "foundation",
+    } satisfies SelectableUserData & { foundation: true };
+    worldRoot.add(foundationMesh);
+
+    const foundationBorder = new THREE.Mesh(
+      new THREE.BoxGeometry(
+        scene3d.foundation.width + 0.18,
+        scene3d.foundation.thickness + 0.02,
+        scene3d.foundation.depth + 0.18,
+      ),
+      new THREE.MeshStandardMaterial({
+        color: "#8d7a63",
+        roughness: 0.95,
+        metalness: 0.02,
+      }),
+    );
+    foundationBorder.position.copy(foundationMesh.position);
+    foundationBorder.position.y -= 0.02;
+    worldRoot.add(foundationBorder);
+  }
 
   // ── Upper floor slabs ──
   const usedFloors = new Set<number>();
@@ -69,6 +100,7 @@ export function buildWorldMeshes(
   (world.roofs ?? []).forEach((r) => r.floor && usedFloors.add(r.floor));
 
   usedFloors.forEach((floor) => {
+    if (!scene3d.foundation) return;
     if (floor <= 0) return;
     const slabGeo = new THREE.BoxGeometry(
       scene3d.foundation.width,
@@ -76,7 +108,8 @@ export function buildWorldMeshes(
       scene3d.foundation.depth,
     );
     const slabMat = new THREE.MeshStandardMaterial({
-      color: "#d4caba",
+      color: "#d6c8b4",
+      roughness: 0.92,
     });
     const slab = new THREE.Mesh(slabGeo, slabMat);
     const fy = floorY(floor);
@@ -89,7 +122,9 @@ export function buildWorldMeshes(
   });
 
   // ── Grid ──
-  buildGrid(worldRoot, foundationBounds, world);
+  if (world.foundation) {
+    buildGrid(worldRoot, foundationBounds, world);
+  }
 
   // ── Walls ──
   scene3d.walls.forEach((wall, index) => {
@@ -263,9 +298,9 @@ function buildGrid(
   const gridY = 0.005;
 
   const gridMaterial = new THREE.LineBasicMaterial({
-    color: "#a0927e",
+    color: "#f4efe5",
     transparent: true,
-    opacity: 0.25,
+    opacity: 0.24,
   });
 
   for (let x = fMinX; x <= fMaxX + 0.001; x += gridStep) {
@@ -296,9 +331,9 @@ function buildGrid(
   // Major grid lines every 5 cells
   const majorStep = gridStep * 5;
   const majorMaterial = new THREE.LineBasicMaterial({
-    color: "#8a7a60",
+    color: "#dccdb3",
     transparent: true,
-    opacity: 0.4,
+    opacity: 0.55,
   });
 
   for (let x = fMinX; x <= fMaxX + 0.001; x += majorStep) {
@@ -330,7 +365,7 @@ function buildGrid(
   const alignMaterial = new THREE.LineBasicMaterial({
     color: "#c6842a",
     transparent: true,
-    opacity: 0.35,
+    opacity: 0.26,
   });
   const alignY = gridY + 0.003;
 

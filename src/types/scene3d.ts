@@ -71,7 +71,7 @@ export type Roof3D = {
 
 export type Scene3D = {
   scale: number;
-  foundation: Floor3D;
+  foundation: Floor3D | null;
   walls: Wall3D[];
   objects: Object3D[];
   doors: Door3D[];

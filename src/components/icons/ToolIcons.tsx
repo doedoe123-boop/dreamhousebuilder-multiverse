@@ -47,6 +47,16 @@ export function IconPillar(p: IconProps = {}) {
   );
 }
 
+export function IconFoundation(p: IconProps = {}) {
+  return (
+    <svg {...defaults(p)}>
+      <path d="M4 8h16v10H4z" />
+      <path d="M2 18h20M7 8V5h10v3" />
+      <path d="M8 12h8M8 15h8" />
+    </svg>
+  );
+}
+
 export function IconWall(p: IconProps = {}) {
   return (
     <svg {...defaults(p)}>

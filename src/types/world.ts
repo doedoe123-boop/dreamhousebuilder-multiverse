@@ -3,6 +3,7 @@ export type StructuralMaterial = "wood" | "steel";
 
 export type ToolMode =
   | "select"
+  | "foundation"
   | "wall"
   | "pillar"
   | "furniture"
@@ -95,7 +96,7 @@ export type Roof = {
 };
 
 export type World = {
-  foundation: Foundation;
+  foundation: Foundation | null;
   walls: Wall[];
   pillars: Pillar[];
   furniture: Furniture[];

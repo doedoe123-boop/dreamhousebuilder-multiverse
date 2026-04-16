@@ -20,10 +20,16 @@ function expandBounds(
 
 export function getWorldBounds(world: World): WorldBounds {
   const bounds = {
-    minX: world.foundation.x,
-    minY: world.foundation.y,
-    maxX: world.foundation.x + world.foundation.width,
-    maxY: world.foundation.y + world.foundation.height,
+    minX: world.foundation?.x ?? 0,
+    minY: world.foundation?.y ?? 0,
+    maxX:
+      world.foundation?.x !== undefined && world.foundation?.width !== undefined
+        ? world.foundation.x + world.foundation.width
+        : 1,
+    maxY:
+      world.foundation?.y !== undefined && world.foundation?.height !== undefined
+        ? world.foundation.y + world.foundation.height
+        : 1,
   }
 
   world.walls.forEach((wall) => {

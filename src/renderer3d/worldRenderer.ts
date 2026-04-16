@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import {
+  DEFAULT_FOUNDATION_HEIGHT,
+  DEFAULT_FOUNDATION_WIDTH,
   DEFAULT_PILLAR_SIZE,
   DEFAULT_STEELBAR_DIAMETER,
   DEFAULT_WALL_THICKNESS,
@@ -37,6 +39,7 @@ export type World3DRendererOptions = {
   onSelectionChange?: (selection: SelectedObject) => void;
   currentTool?: ToolMode;
   currentFurnitureType?: FurnitureType;
+  onPlaceFoundation?: (x: number, y: number) => void;
   onPlacePillar?: (x: number, y: number) => void;
   onPlaceWall?: (x1: number, y1: number, x2: number, y2: number) => void;
   onPlaceDoor?: (wallId: string, hitX: number, hitZ: number) => void;
@@ -53,6 +56,7 @@ export function createWorld3DRenderer(
 ) {
   // ── Scene setup ──
   const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2("#d7e3ea", 0.0038);
 
   const camera = new THREE.PerspectiveCamera(
     55,
@@ -71,6 +75,10 @@ export function createWorld3DRenderer(
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.target.set(6, 0, 6);
+  controls.minPolarAngle = 0.22;
+  controls.maxPolarAngle = Math.PI / 2.12;
+  controls.maxDistance = 180;
+  controls.minDistance = 4;
 
   // ── Characters ──
   const player = createPlayerCharacter();
@@ -165,19 +173,29 @@ export function createWorld3DRenderer(
   document.addEventListener("pointerlockchange", handlePointerLockChange);
 
   // ── Lighting ──
-  const ambientLight = new THREE.AmbientLight("#fff7ed", 1.6);
+  const ambientLight = new THREE.AmbientLight("#f8efe1", 0.9);
   scene.add(ambientLight);
-  const directionalLight = new THREE.DirectionalLight("#ffffff", 1.4);
-  directionalLight.position.set(12, 24, 16);
+
+  const hemiLight = new THREE.HemisphereLight("#c7ecff", "#6c7d51", 1.35);
+  hemiLight.position.set(0, 40, 0);
+  scene.add(hemiLight);
+
+  const directionalLight = new THREE.DirectionalLight("#fff4df", 1.7);
+  directionalLight.position.set(26, 34, 18);
   directionalLight.castShadow = true;
+  directionalLight.shadow.mapSize.set(2048, 2048);
   scene.add(directionalLight);
+
+  const rimLight = new THREE.DirectionalLight("#d4e3ff", 0.42);
+  rimLight.position.set(-30, 18, -12);
+  scene.add(rimLight);
 
   // ── Sky gradient (large sphere with vertex colors) ──
   const skyGeo = new THREE.SphereGeometry(400, 32, 16);
   const skyColors = new Float32Array(skyGeo.attributes.position.count * 3);
-  const topColor = new THREE.Color("#87CEEB"); // sky blue
-  const horizonColor = new THREE.Color("#ddeeff"); // pale blue-white
-  const bottomColor = new THREE.Color("#8fbc8f"); // soft green tint below horizon
+  const topColor = new THREE.Color("#7fb2dc");
+  const horizonColor = new THREE.Color("#f7dcc0");
+  const bottomColor = new THREE.Color("#8da97d");
   const tempColor = new THREE.Color();
   for (let i = 0; i < skyGeo.attributes.position.count; i++) {
     const y = skyGeo.attributes.position.getY(i);
@@ -201,7 +219,7 @@ export function createWorld3DRenderer(
   scene.add(skyDome);
 
   // ── Terrain ground ──
-  const terrainSize = 600;
+  const terrainSize = 900;
   const terrainGeo = new THREE.PlaneGeometry(terrainSize, terrainSize, 64, 64);
   terrainGeo.rotateX(-Math.PI / 2);
   // Gentle rolling hills
@@ -211,26 +229,26 @@ export function createWorld3DRenderer(
     const z = posAttr.getZ(i);
     // Keep foundation area flat, hills outside
     const distFromCenter = Math.sqrt(x * x + z * z);
-    const flatRadius = 60; // ~foundation area
-    const hillFactor = Math.max(0, (distFromCenter - flatRadius) / 80);
+    const flatRadius = 78;
+    const hillFactor = Math.max(0, (distFromCenter - flatRadius) / 110);
     const height =
       hillFactor *
-      (Math.sin(x * 0.02) * 1.2 +
-        Math.cos(z * 0.03) * 0.8 +
-        Math.sin((x + z) * 0.015) * 1.5);
-    posAttr.setY(i, Math.min(height, 6) - 0.15);
+      (Math.sin(x * 0.018) * 1.6 +
+        Math.cos(z * 0.028) * 1.2 +
+        Math.sin((x + z) * 0.014) * 1.8);
+    posAttr.setY(i, Math.min(height, 9) - 0.22);
   }
   terrainGeo.computeVertexNormals();
   // Vertex-colored terrain: grassier further out
   const terrainColors = new Float32Array(posAttr.count * 3);
-  const grassColor = new THREE.Color("#5a8f4a");
-  const dirtColor = new THREE.Color("#9b8b6e");
-  const centerColor = new THREE.Color("#b8a88a");
+  const grassColor = new THREE.Color("#5d8d52");
+  const dirtColor = new THREE.Color("#8d785f");
+  const centerColor = new THREE.Color("#bba789");
   for (let i = 0; i < posAttr.count; i++) {
     const x = posAttr.getX(i);
     const z = posAttr.getZ(i);
     const dist = Math.sqrt(x * x + z * z);
-    const t = Math.min(1, Math.max(0, (dist - 30) / 100));
+    const t = Math.min(1, Math.max(0, (dist - 45) / 150));
     tempColor.copy(centerColor).lerp(dirtColor, Math.min(t, 0.5) * 2);
     if (t > 0.5) tempColor.lerp(grassColor, (t - 0.5) * 2);
     terrainColors[i * 3] = tempColor.r;
@@ -240,16 +258,94 @@ export function createWorld3DRenderer(
   terrainGeo.setAttribute("color", new THREE.BufferAttribute(terrainColors, 3));
   const terrainMat = new THREE.MeshStandardMaterial({
     vertexColors: true,
-    roughness: 0.95,
+    roughness: 0.97,
     metalness: 0,
   });
   const terrain = new THREE.Mesh(terrainGeo, terrainMat);
   terrain.receiveShadow = true;
   scene.add(terrain);
 
-  // ── Fog ──
-  scene.fog = new THREE.Fog("#c8ddf0", 80, 350);
-  scene.background = null; // sky dome replaces solid background
+  const grassBladeGeometry = new THREE.PlaneGeometry(0.22, 0.7);
+  grassBladeGeometry.translate(0, 0.35, 0);
+  const grassBladeMaterial = new THREE.MeshStandardMaterial({
+    color: "#6f9d52",
+    side: THREE.DoubleSide,
+    roughness: 1,
+  });
+  const grassCount = 1400;
+  const grass = new THREE.InstancedMesh(
+    grassBladeGeometry,
+    grassBladeMaterial,
+    grassCount,
+  );
+  const grassDummy = new THREE.Object3D();
+  let grassIndex = 0;
+  for (let i = 0; i < grassCount * 2 && grassIndex < grassCount; i++) {
+    const x = (Math.random() - 0.5) * 320;
+    const z = (Math.random() - 0.5) * 320;
+    if (Math.sqrt(x * x + z * z) < 78) continue;
+    const baseHeight =
+      Math.max(0, (Math.sqrt(x * x + z * z) - 78) / 110) *
+        (Math.sin(x * 0.018) * 1.6 +
+          Math.cos(z * 0.028) * 1.2 +
+          Math.sin((x + z) * 0.014) * 1.8) -
+      0.18;
+    grassDummy.position.set(x, Math.min(baseHeight, 9), z);
+    grassDummy.rotation.y = Math.random() * Math.PI;
+    const grassScale = 0.85 + Math.random() * 0.8;
+    grassDummy.scale.setScalar(grassScale);
+    grassDummy.updateMatrix();
+    grass.setMatrixAt(grassIndex, grassDummy.matrix);
+    grassIndex += 1;
+  }
+  grass.instanceMatrix.needsUpdate = true;
+  scene.add(grass);
+
+  const constructionRing = new THREE.Mesh(
+    new THREE.RingGeometry(62, 96, 48),
+    new THREE.MeshStandardMaterial({
+      color: "#7d7a70",
+      transparent: true,
+      opacity: 0.28,
+      side: THREE.DoubleSide,
+      roughness: 1,
+    }),
+  );
+  constructionRing.rotation.x = -Math.PI / 2;
+  constructionRing.position.y = -0.02;
+  scene.add(constructionRing);
+
+  const sun = new THREE.Mesh(
+    new THREE.SphereGeometry(8, 18, 18),
+    new THREE.MeshBasicMaterial({
+      color: "#ffe7b5",
+      transparent: true,
+      opacity: 0.7,
+    }),
+  );
+  sun.position.set(110, 115, -140);
+  scene.add(sun);
+
+  const distantHillMaterial = new THREE.MeshStandardMaterial({
+    color: "#6f8d68",
+    roughness: 1,
+  });
+  [
+    { scale: [90, 20, 70], pos: [-120, 6, -180] },
+    { scale: [120, 24, 85], pos: [170, 10, -190] },
+    { scale: [75, 18, 60], pos: [210, 8, 120] },
+    { scale: [110, 22, 80], pos: [-200, 9, 150] },
+  ].forEach(({ scale, pos }) => {
+    const hill = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 20, 16),
+      distantHillMaterial.clone(),
+    );
+    hill.scale.set(scale[0], scale[1], scale[2]);
+    hill.position.set(pos[0], pos[1], pos[2]);
+    scene.add(hill);
+  });
+
+  scene.background = null;
 
   // ── World root & interaction state ──
   const worldRoot = new THREE.Group();
@@ -266,6 +362,7 @@ export function createWorld3DRenderer(
   let currentFurnitureType: FurnitureType =
     options.currentFurnitureType ?? "bed";
   let onSelectionChange = options.onSelectionChange;
+  let onPlaceFoundation = options.onPlaceFoundation;
   let onPlacePillar = options.onPlacePillar;
   let onPlaceWall = options.onPlaceWall;
   let onPlaceDoor = options.onPlaceDoor;
@@ -276,6 +373,7 @@ export function createWorld3DRenderer(
   let onPaint = options.onPaint;
 
   let foundationBounds = { minX: 0, maxX: 0, minZ: 0, maxZ: 0 };
+  let hasFoundation = false;
   let pointerDownPosition: { x: number; y: number } | null = null;
   let didPointerDrag = false;
 
@@ -419,7 +517,19 @@ export function createWorld3DRenderer(
       transparent: true,
       opacity: 0.4,
     });
-    if (currentTool === "pillar") {
+    if (currentTool === "foundation") {
+      const geo = new THREE.BoxGeometry(
+        toSceneUnits(DEFAULT_FOUNDATION_WIDTH),
+        toSceneUnits(10),
+        toSceneUnits(DEFAULT_FOUNDATION_HEIGHT),
+      );
+      placementGhost = new THREE.Mesh(geo, ghostMat);
+      placementGhost.position.set(
+        toSceneUnits(x + DEFAULT_FOUNDATION_WIDTH / 2),
+        toSceneUnits(5),
+        toSceneUnits(y + DEFAULT_FOUNDATION_HEIGHT / 2),
+      );
+    } else if (currentTool === "pillar") {
       const size = toSceneUnits(DEFAULT_PILLAR_SIZE);
       const pillarHeight = toSceneUnits(DEFAULT_WALL_HEIGHT_PX);
       const geo = new THREE.CylinderGeometry(
@@ -458,6 +568,11 @@ export function createWorld3DRenderer(
   // ── Animation loop ──
   let animationFrameId = 0;
   let lastTime = performance.now();
+
+  const enforceAboveGroundCamera = () => {
+    controls.target.y = Math.max(0.4, controls.target.y);
+    camera.position.y = Math.max(1.2, camera.position.y);
+  };
 
   const animate = () => {
     animationFrameId = window.requestAnimationFrame(animate);
@@ -522,7 +637,9 @@ export function createWorld3DRenderer(
         controls.target.lerp(player.group.position.clone().setY(0.8), 3 * dt);
       }
 
+      enforceAboveGroundCamera();
       controls.update();
+      enforceAboveGroundCamera();
     }
 
     // Foreman follows the player
@@ -601,13 +718,16 @@ export function createWorld3DRenderer(
     updatePointerRay(event);
     const point = raycaster.ray.intersectPlane(groundPlane, groundIntersection);
     if (!point) return null;
-    if (
-      point.x < foundationBounds.minX ||
-      point.x > foundationBounds.maxX ||
-      point.z < foundationBounds.minZ ||
-      point.z > foundationBounds.maxZ
-    )
-      return null;
+    if (currentTool !== "foundation") {
+      if (!hasFoundation) return null;
+      if (
+        point.x < foundationBounds.minX ||
+        point.x > foundationBounds.maxX ||
+        point.z < foundationBounds.minZ ||
+        point.z > foundationBounds.maxZ
+      )
+        return null;
+    }
     return {
       x: snap(point.x * SCENE3D_SCALE, GRID_SIZE),
       y: snap(point.z * SCENE3D_SCALE, GRID_SIZE),
@@ -625,6 +745,7 @@ export function createWorld3DRenderer(
   };
 
   const isPlacementTool = () =>
+    currentTool === "foundation" ||
     currentTool === "pillar" ||
     currentTool === "wall" ||
     currentTool === "furniture" ||
@@ -693,7 +814,11 @@ export function createWorld3DRenderer(
         : "not-allowed";
       return;
     }
-    if (currentTool === "pillar" || currentTool === "furniture") {
+    if (
+      currentTool === "foundation" ||
+      currentTool === "pillar" ||
+      currentTool === "furniture"
+    ) {
       const placement =
         currentTool === "pillar"
           ? getGroundPlacement(event)
@@ -767,6 +892,19 @@ export function createWorld3DRenderer(
       selectedObject = null;
       onSelectionChange?.(null);
       onPlacePillar?.(placement.x, placement.y);
+      return;
+    }
+    if (currentTool === "foundation") {
+      const ground = getGroundPoint(event);
+      if (!ground) return;
+      updateSelectedMesh(null);
+      selectedObject = null;
+      onSelectionChange?.(null);
+      clearPlacementGhost();
+      onPlaceFoundation?.(
+        snap(ground.x - DEFAULT_FOUNDATION_WIDTH / 2, GRID_SIZE),
+        snap(ground.y - DEFAULT_FOUNDATION_HEIGHT / 2, GRID_SIZE),
+      );
       return;
     }
     if (currentTool === "furniture") {
@@ -865,6 +1003,7 @@ export function createWorld3DRenderer(
     onSelectionChange?.(null);
 
     foundationBounds = buildWorldMeshes(worldRoot, world);
+    hasFoundation = !!world.foundation;
 
     // Only center the camera on the first render (initial load).
     // Subsequent renders (placing objects) should not move the camera.
@@ -880,6 +1019,7 @@ export function createWorld3DRenderer(
 
   const getCursorForTool = (tool: ToolMode) => {
     if (
+      tool === "foundation" ||
       tool === "pillar" ||
       tool === "wall" ||
       tool === "furniture" ||
@@ -898,6 +1038,7 @@ export function createWorld3DRenderer(
   return {
     syncInteraction(nextOptions: World3DRendererOptions) {
       onSelectionChange = nextOptions.onSelectionChange;
+      onPlaceFoundation = nextOptions.onPlaceFoundation;
       onPlacePillar = nextOptions.onPlacePillar;
       onPlaceWall = nextOptions.onPlaceWall;
       onPlaceDoor = nextOptions.onPlaceDoor;

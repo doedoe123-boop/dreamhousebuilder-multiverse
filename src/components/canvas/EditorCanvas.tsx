@@ -316,17 +316,19 @@ export function EditorCanvas({
           fill="#f7f4ee"
           listening={false}
         />
-        <Rect
-          x={world.foundation.x}
-          y={world.foundation.y}
-          width={world.foundation.width}
-          height={world.foundation.height}
-          fill="rgba(222, 214, 197, 0.42)"
-          stroke="#d2c5b1"
-          strokeWidth={2}
-          cornerRadius={16}
-          listening={false}
-        />
+        {world.foundation && (
+          <Rect
+            x={world.foundation.x}
+            y={world.foundation.y}
+            width={world.foundation.width}
+            height={world.foundation.height}
+            fill="rgba(222, 214, 197, 0.42)"
+            stroke="#d2c5b1"
+            strokeWidth={2}
+            cornerRadius={16}
+            listening={false}
+          />
+        )}
         {gridLines.map((line) => (
           <Line
             key={line.key}

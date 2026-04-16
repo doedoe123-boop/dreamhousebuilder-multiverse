@@ -3,6 +3,8 @@ import "./App.css";
 import { FloatingToolbar } from "./components/layout/FloatingToolbar";
 import { World3DView } from "./components/three/World3DView";
 import {
+  DEFAULT_FOUNDATION_HEIGHT,
+  DEFAULT_FOUNDATION_WIDTH,
   DEFAULT_DOOR_WIDTH,
   DEFAULT_PILLAR_SIZE,
   DEFAULT_ROOF_OVERHANG,
@@ -64,7 +66,7 @@ function App() {
     return true;
   }, []);
   const [selectedObject, setSelectedObject] = useState<SelectedObject>(null);
-  const [currentTool, setCurrentTool] = useState<ToolMode>("select");
+  const [currentTool, setCurrentTool] = useState<ToolMode>("foundation");
   const [currentMaterial, setCurrentMaterial] =
     useState<StructuralMaterial>("wood");
   const [currentFurnitureType, setCurrentFurnitureType] =
@@ -83,6 +85,8 @@ function App() {
     () => ({
       select:
         "Inspect mode. Click any object to select it. Press Delete to remove.",
+      foundation:
+        "Foundation tool. Click the land to place a build base before adding the house structure.",
       pillar: `Pillar tool. Click the foundation to place a ${currentMaterial} pillar.`,
       wall: `Wall tool. Click to set start point, click again to finish the wall.`,
       door: "Door tool. Click on any wall to place a door.",
@@ -121,6 +125,27 @@ function App() {
   };
 
   // --- Tool handlers ---
+
+  const placeFoundation = useCallback(
+    (x: number, y: number) => {
+      updateWorld((w) => ({
+        ...w,
+        foundation: {
+          x,
+          y,
+          width: DEFAULT_FOUNDATION_WIDTH,
+          height: DEFAULT_FOUNDATION_HEIGHT,
+          type: "floor",
+          color: w.foundation?.color,
+        },
+      }));
+      setSelectedObject(null);
+      setStatusMessage(
+        "Foundation placed. You can start adding pillars, walls, and the rest of the house.",
+      );
+    },
+    [updateWorld],
+  );
 
   const placePillar = useCallback(
     (x: number, y: number) => {
@@ -370,6 +395,19 @@ function App() {
         };
       if (kind === "roof")
         return { ...w, roofs: w.roofs.filter((item) => item.id !== id) };
+      if (kind === "foundation") {
+        return {
+          ...w,
+          foundation: null,
+          walls: [],
+          pillars: [],
+          furniture: [],
+          doors: [],
+          windows: [],
+          steelBars: [],
+          roofs: [],
+        };
+      }
       return w;
     });
 
@@ -474,6 +512,16 @@ function App() {
             ),
           };
         }
+        if (kind === "foundation" && w.foundation) {
+          return {
+            ...w,
+            foundation: {
+              ...w.foundation,
+              x: w.foundation.x + dx,
+              y: w.foundation.y + dy,
+            },
+          };
+        }
         return w;
       });
     },
@@ -522,15 +570,15 @@ function App() {
 
       // Number keys 1-9 to switch tools
       const toolKeys: Record<string, ToolMode> = {
-        "1": "select",
-        "2": "pillar",
-        "3": "wall",
-        "4": "door",
-        "5": "window",
-        "6": "steelbar",
-        "7": "roof",
-        "8": "furniture",
-        "9": "paint",
+        "1": "foundation",
+        "2": "select",
+        "3": "pillar",
+        "4": "wall",
+        "5": "door",
+        "6": "window",
+        "7": "steelbar",
+        "8": "roof",
+        "9": "furniture",
       };
       if (toolKeys[event.key]) {
         const tool = toolKeys[event.key];
@@ -595,6 +643,12 @@ function App() {
   const handleSetTool = (tool: ToolMode) => {
     setCurrentTool(tool);
     setSelectedObject(null);
+    if (!world.foundation && tool !== "foundation" && tool !== "select") {
+      setStatusMessage(
+        "Place a foundation first, then continue with pillars, walls, and the rest of the house.",
+      );
+      return;
+    }
     setStatusMessage(toolStatusMessages[tool]);
   };
 
@@ -610,6 +664,9 @@ function App() {
           };
         }
         if (kind === "foundation") {
+          if (!w.foundation) {
+            return w;
+          }
           return {
             ...w,
             foundation: { ...w.foundation, color: currentPaintColor },
@@ -670,10 +727,26 @@ function App() {
               <div
                 className={
                   "fp-key-guide__row" +
+                  (currentTool === "foundation" ? " is-active" : "")
+                }
+              >
+                <kbd>1</kbd> Foundation
+              </div>
+              <div
+                className={
+                  "fp-key-guide__row" +
+                  (currentTool === "select" ? " is-active" : "")
+                }
+              >
+                <kbd>2</kbd> Inspect
+              </div>
+              <div
+                className={
+                  "fp-key-guide__row" +
                   (currentTool === "pillar" ? " is-active" : "")
                 }
               >
-                <kbd>2</kbd> Pillar
+                <kbd>3</kbd> Pillar
               </div>
               <div
                 className={
@@ -681,7 +754,7 @@ function App() {
                   (currentTool === "wall" ? " is-active" : "")
                 }
               >
-                <kbd>3</kbd> Wall
+                <kbd>4</kbd> Wall
               </div>
               <div
                 className={
@@ -689,7 +762,7 @@ function App() {
                   (currentTool === "door" ? " is-active" : "")
                 }
               >
-                <kbd>4</kbd> Door
+                <kbd>5</kbd> Door
               </div>
               <div
                 className={
@@ -697,7 +770,7 @@ function App() {
                   (currentTool === "window" ? " is-active" : "")
                 }
               >
-                <kbd>5</kbd> Window
+                <kbd>6</kbd> Window
               </div>
               <div
                 className={
@@ -705,7 +778,7 @@ function App() {
                   (currentTool === "steelbar" ? " is-active" : "")
                 }
               >
-                <kbd>6</kbd> Steel Bar
+                <kbd>7</kbd> Steel Bar
               </div>
               <div
                 className={
@@ -713,7 +786,7 @@ function App() {
                   (currentTool === "roof" ? " is-active" : "")
                 }
               >
-                <kbd>7</kbd> Roof
+                <kbd>8</kbd> Roof
               </div>
               <div
                 className={
@@ -721,15 +794,7 @@ function App() {
                   (currentTool === "furniture" ? " is-active" : "")
                 }
               >
-                <kbd>8</kbd> Furniture
-              </div>
-              <div
-                className={
-                  "fp-key-guide__row" +
-                  (currentTool === "paint" ? " is-active" : "")
-                }
-              >
-                <kbd>9</kbd> Paint
+                <kbd>9</kbd> Furniture
               </div>
             </div>
           )}
@@ -788,6 +853,7 @@ function App() {
             currentFurnitureType={currentFurnitureType}
             foremanDialogue={foremanDialogue}
             onPlacePillar={placePillar}
+            onPlaceFoundation={placeFoundation}
             onPlaceWall={placeWall}
             onPlaceDoor={placeDoor}
             onPlaceWindow={placeWindow}

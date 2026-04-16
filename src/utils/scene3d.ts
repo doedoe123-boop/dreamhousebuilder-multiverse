@@ -56,6 +56,10 @@ function createDimensions(
 }
 
 function createFoundationFloor(world: World): Floor3D {
+  if (!world.foundation) {
+    throw new Error("Foundation is required to create a foundation floor");
+  }
+
   return {
     position: createPosition(
       world.foundation.x + world.foundation.width / 2,
@@ -175,7 +179,7 @@ function createRoofObject(roof: Roof): Roof3D {
 }
 
 export function exportWorldTo3D(world: World): Scene3D {
-  const foundation = createFoundationFloor(world);
+  const foundation = world.foundation ? createFoundationFloor(world) : null;
   const walls = world.walls.map((wall) => createWallObject(wall));
   const objects = world.furniture.map((item) => createFurnitureObject(item));
 

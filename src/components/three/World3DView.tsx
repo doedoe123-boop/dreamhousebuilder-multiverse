@@ -13,6 +13,7 @@ type World3DViewProps = {
   currentFurnitureType?: FurnitureType;
   foremanDialogue?: string;
   onSelectionChange?: (selection: SelectedObject) => void;
+  onPlaceFoundation?: (x: number, y: number) => void;
   onPlacePillar?: (x: number, y: number) => void;
   onPlaceWall?: (x1: number, y1: number, x2: number, y2: number) => void;
   onPlaceDoor?: (wallId: string, hitX: number, hitZ: number) => void;
@@ -30,6 +31,7 @@ export function World3DView({
   currentFurnitureType,
   foremanDialogue,
   onSelectionChange,
+  onPlaceFoundation,
   onPlacePillar,
   onPlaceWall,
   onPlaceDoor,
@@ -70,6 +72,7 @@ export function World3DView({
       currentTool,
       currentFurnitureType,
       onSelectionChange,
+      onPlaceFoundation,
       onPlacePillar,
       onPlaceWall,
       onPlaceDoor,
@@ -82,6 +85,7 @@ export function World3DView({
   }, [
     currentTool,
     currentFurnitureType,
+    onPlaceFoundation,
     onPlacePillar,
     onPlaceWall,
     onPlaceDoor,

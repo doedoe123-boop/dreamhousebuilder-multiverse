@@ -32,6 +32,16 @@ const DIALOGUE_LINES: DialogueLine[] = [
       w.furniture.length > 0,
   },
   {
+    id: "foundation-active",
+    text: "Click on the land to place your foundation. This will become the main base for the house.",
+    check: (_w, t) => t === "foundation",
+  },
+  {
+    id: "foundation-hint",
+    text: "Start with a foundation so the house has a real base. Switch to the Foundation tool first.",
+    check: (w) => w.foundation === null,
+  },
+  {
     id: "furniture-active",
     text: "Nice pick! Click anywhere inside a room to drop your furniture.",
     check: (_w, t) => t === "furniture",
@@ -104,8 +114,8 @@ const DIALOGUE_LINES: DialogueLine[] = [
   },
   {
     id: "pillar-hint",
-    text: "First things first! Switch to the Pillar tool and place some pillars.",
-    check: (w) => w.pillars.length === 0,
+    text: "Great foundation. Now switch to the Pillar tool and place some structural supports.",
+    check: (w) => w.foundation !== null && w.pillars.length === 0,
   },
   {
     id: "inspect-has-stuff",
@@ -114,7 +124,7 @@ const DIALOGUE_LINES: DialogueLine[] = [
   },
   {
     id: "greeting",
-    text: "Hey Builder! Welcome to Dream House Builder! Let's start with some pillars!",
+    text: "Hey Builder! Welcome to Dream House Builder! Let's start by placing a foundation on the land.",
     check: () => true,
   },
 ];
