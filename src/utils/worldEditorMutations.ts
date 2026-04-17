@@ -2,6 +2,8 @@ import {
   DEFAULT_DOOR_WIDTH,
   DEFAULT_FOUNDATION_HEIGHT,
   DEFAULT_FOUNDATION_WIDTH,
+  MAX_STRUCTURE_SCALE,
+  MIN_STRUCTURE_SCALE,
   DEFAULT_PILLAR_SIZE,
   DEFAULT_ROOF_OVERHANG,
   DEFAULT_ROOF_PITCH,
@@ -19,13 +21,19 @@ import type {
   World,
 } from "../types/world";
 import { createId, snap } from "./editor";
+import {
+  getWallPlacementValidation,
+  snapFoundationPlacement,
+} from "./foundationWallPlacement";
+import { clampScale } from "./structureResize";
 
 export function addFoundation(world: World, x: number, y: number): World {
+  const snapped = snapFoundationPlacement(x, y);
   return {
     ...world,
     foundation: {
-      x,
-      y,
+      x: snapped.x,
+      y: snapped.y,
       width: DEFAULT_FOUNDATION_WIDTH,
       height: DEFAULT_FOUNDATION_HEIGHT,
       type: "floor",
@@ -50,6 +58,7 @@ export function addPillar(
         x,
         y,
         size: DEFAULT_PILLAR_SIZE,
+        heightScale: 1,
         material,
         floor,
       },
@@ -66,6 +75,15 @@ export function addWall(
   material: StructuralMaterial,
   floor: number,
 ): World {
+  const validation = getWallPlacementValidation(
+    world,
+    { x: x1, y: y1 },
+    { x: x2, y: y2 },
+  );
+  if (!validation.valid) {
+    return world;
+  }
+
   return {
     ...world,
     walls: [
@@ -77,6 +95,8 @@ export function addWall(
         x2,
         y2,
         thickness: DEFAULT_WALL_THICKNESS,
+        lengthScale: 1,
+        heightScale: 1,
         material,
         floor,
       },
@@ -295,6 +315,80 @@ export function deleteSelectedObject(
       roofs: [],
     };
   }
+  return world;
+}
+
+export function resizeSelectedObjectPrimary(
+  world: World,
+  selection: NonNullable<SelectedObject>,
+  delta: number,
+): World {
+  if (selection.kind === "pillar") {
+    return {
+      ...world,
+      pillars: world.pillars.map((pillar) =>
+        pillar.id === selection.id
+          ? {
+              ...pillar,
+              heightScale: clampScale(
+                (pillar.heightScale ?? 1) + delta,
+                MIN_STRUCTURE_SCALE,
+                MAX_STRUCTURE_SCALE,
+              ),
+            }
+          : pillar,
+      ),
+    };
+  }
+
+  if (selection.kind === "wall") {
+    return {
+      ...world,
+      walls: world.walls.map((wall) =>
+        wall.id === selection.id
+          ? {
+              ...wall,
+              lengthScale: clampScale(
+                (wall.lengthScale ?? 1) + delta,
+                MIN_STRUCTURE_SCALE,
+                MAX_STRUCTURE_SCALE,
+              ),
+            }
+          : wall,
+      ),
+    };
+  }
+
+  return world;
+}
+
+export function resizeSelectedObjectHeight(
+  world: World,
+  selection: NonNullable<SelectedObject>,
+  delta: number,
+): World {
+  if (selection.kind === "pillar") {
+    return resizeSelectedObjectPrimary(world, selection, delta);
+  }
+
+  if (selection.kind === "wall") {
+    return {
+      ...world,
+      walls: world.walls.map((wall) =>
+        wall.id === selection.id
+          ? {
+              ...wall,
+              heightScale: clampScale(
+                (wall.heightScale ?? 1) + delta,
+                MIN_STRUCTURE_SCALE,
+                MAX_STRUCTURE_SCALE,
+              ),
+            }
+          : wall,
+      ),
+    };
+  }
+
   return world;
 }
 

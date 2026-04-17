@@ -30,6 +30,12 @@ type FloatingToolbarProps = {
   currentMaterial: StructuralMaterial;
   currentFurnitureType: FurnitureType;
   selectedObject: SelectedObject;
+  selectedResizeInfo: {
+    primaryLabel: string;
+    primaryValue: number;
+    secondaryLabel: string | null;
+    secondaryValue: number | null;
+  } | null;
   statusMessage: string;
   canUndo: boolean;
   onSetTool: (tool: ToolMode) => void;
@@ -38,6 +44,8 @@ type FloatingToolbarProps = {
   onSaveWorld: () => void;
   onLoadWorld: () => void;
   onDeleteSelected: () => void;
+  onResizeSelectedPrimary: (direction: -1 | 1) => void;
+  onResizeSelectedHeight: (direction: -1 | 1) => void;
   onUndo: () => void;
   currentPaintColor: string;
   onSetPaintColor: (color: string) => void;
@@ -64,6 +72,7 @@ export function FloatingToolbar({
   currentMaterial,
   currentFurnitureType,
   selectedObject,
+  selectedResizeInfo,
   statusMessage,
   canUndo,
   onSetTool,
@@ -72,6 +81,8 @@ export function FloatingToolbar({
   onSaveWorld,
   onLoadWorld,
   onDeleteSelected,
+  onResizeSelectedPrimary,
+  onResizeSelectedHeight,
   onUndo,
   currentPaintColor,
   onSetPaintColor,
@@ -207,6 +218,59 @@ export function FloatingToolbar({
                     >
                       Delete Selected
                     </button>
+                    {selectedResizeInfo && (
+                      <div className="floating-stack">
+                        <div className="floating-badge floating-badge--muted">
+                          {selectedResizeInfo.primaryLabel}:{" "}
+                          {selectedResizeInfo.primaryValue.toFixed(1)}
+                        </div>
+                        <div className="floating-segment">
+                          <button
+                            type="button"
+                            className="floating-tool"
+                            onClick={() => onResizeSelectedPrimary(-1)}
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            className="floating-tool"
+                            onClick={() => onResizeSelectedPrimary(1)}
+                          >
+                            +
+                          </button>
+                        </div>
+                        {selectedResizeInfo.secondaryLabel &&
+                          selectedResizeInfo.secondaryValue !== null && (
+                            <>
+                              <div className="floating-badge floating-badge--muted">
+                                {selectedResizeInfo.secondaryLabel}:{" "}
+                                {selectedResizeInfo.secondaryValue.toFixed(1)}
+                              </div>
+                              <div className="floating-segment">
+                                <button
+                                  type="button"
+                                  className="floating-tool"
+                                  onClick={() => onResizeSelectedHeight(-1)}
+                                >
+                                  -
+                                </button>
+                                <button
+                                  type="button"
+                                  className="floating-tool"
+                                  onClick={() => onResizeSelectedHeight(1)}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        <div className="floating-note">
+                          Use <kbd>[</kbd> and <kbd>]</kbd> to resize. Hold{" "}
+                          <kbd>Shift</kbd> for height.
+                        </div>
+                      </div>
+                    )}
                     <div className="floating-note">
                       Use arrow keys to nudge the selected object.
                     </div>

@@ -29,6 +29,8 @@ export type Wall = {
   x2: number;
   y2: number;
   thickness: number;
+  lengthScale?: number;
+  heightScale?: number;
   material?: StructuralMaterial;
   color?: string;
   floor?: number;
@@ -39,6 +41,7 @@ export type Pillar = {
   x: number;
   y: number;
   size: number;
+  heightScale?: number;
   material?: StructuralMaterial;
   floor?: number;
 };

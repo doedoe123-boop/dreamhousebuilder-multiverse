@@ -12,6 +12,9 @@ export const DEFAULT_WINDOW_HEIGHT = 60;
 export const DEFAULT_STEELBAR_DIAMETER = 8;
 export const DEFAULT_ROOF_OVERHANG = 40;
 export const DEFAULT_ROOF_PITCH = 30;
+export const MIN_STRUCTURE_SCALE = 0.5;
+export const MAX_STRUCTURE_SCALE = 10;
+export const STRUCTURE_SCALE_STEP = 0.5;
 
 export const DEFAULT_FOUNDATION: Foundation = {
   x: 0,

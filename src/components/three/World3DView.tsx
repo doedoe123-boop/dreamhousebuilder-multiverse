@@ -23,6 +23,7 @@ type World3DViewProps = {
   onPlaceSteelBar?: (x1: number, y1: number, x2: number, y2: number) => void;
   onPlaceRoof?: (x: number, y: number, width: number, height: number) => void;
   onPaint?: (kind: "wall" | "foundation", id: string) => void;
+  onPlacementBlocked?: (reason: string) => void;
   onViewModeChange?: (fp: boolean) => void;
   onForemanNearbyChange?: (nearby: boolean) => void;
 };
@@ -43,6 +44,7 @@ export function World3DView({
   onPlaceSteelBar,
   onPlaceRoof,
   onPaint,
+  onPlacementBlocked,
   onViewModeChange,
   onForemanNearbyChange,
 }: World3DViewProps) {
@@ -85,6 +87,7 @@ export function World3DView({
       onPlaceSteelBar,
       onPlaceRoof,
       onPaint,
+      onPlacementBlocked,
       onForemanNearbyChange,
     });
   }, [
@@ -99,6 +102,7 @@ export function World3DView({
     onPlaceSteelBar,
     onPlaceRoof,
     onPaint,
+    onPlacementBlocked,
     onSelectionChange,
     onForemanNearbyChange,
   ]);

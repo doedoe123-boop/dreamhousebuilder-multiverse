@@ -496,3 +496,15 @@ export function getForemanMemoryReflection(
       return null;
   }
 }
+
+export function getForemanStartBuildGuidance(): string {
+  return "Let's begin with the foundation. Give the house a solid base first, then we can frame real walls on top of it.";
+}
+
+export function getForemanFoundationPlacedGuidance(): string {
+  return "Good. The base is down now. Start your walls from the foundation edge so the structure reads clean and supported.";
+}
+
+export function getForemanFirstWallPlacedGuidance(): string {
+  return "That's the first wall in. Keep connecting from corners or wall ends so the frame grows like a real structure.";
+}

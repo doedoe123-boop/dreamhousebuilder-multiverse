@@ -9,15 +9,9 @@ import type { ToolMode } from "./types/world";
 import {
   getActiveDialogue,
   getForemanIdeas,
-  getForemanMemoryReflection,
-  getForemanSmallTalk,
   getForemanSimpleExplanation,
   getForemanStageLabel,
   getForemanStuckAdvice,
-  getForemanSuggestedStep,
-  getForemanTone,
-  getForemanWhatComesAfter,
-  getForemanWhyThisMatters,
 } from "./utils/dialogue";
 import { useWorldEditor } from "./hooks/useWorldEditor";
 
@@ -33,7 +27,6 @@ function App() {
     currentFloor,
     statusMessage,
     toolStatusMessages,
-    foremanMemoryEvent,
     setCurrentTool,
     setCurrentMaterial,
     setCurrentFurnitureType,
@@ -55,6 +48,9 @@ function App() {
     placeRoof,
     deleteSelected,
     nudgeSelected,
+    resizeSelectedPrimary,
+    resizeSelectedHeight,
+    selectedResizeInfo,
     handleSelectionChange,
     handleSetTool,
     handlePaint,
@@ -181,6 +177,14 @@ function App() {
         return;
       }
 
+      if (selectedObject && (event.key === "[" || event.key === "]")) {
+        event.preventDefault();
+        const direction = event.key === "[" ? -1 : 1;
+        if (event.shiftKey) resizeSelectedHeight(direction);
+        else resizeSelectedPrimary(direction);
+        return;
+      }
+
       // PageUp/PageDown to switch floors
       if (event.key === "PageUp") {
         event.preventDefault();
@@ -200,6 +204,9 @@ function App() {
     isNearForeman,
     isTalkingToForeman,
     nudgeSelected,
+    resizeSelectedHeight,
+    resizeSelectedPrimary,
+    selectedResizeInfo,
     selectedObject,
     setCurrentFloor,
     setCurrentTool,
@@ -214,20 +221,7 @@ function App() {
     () => getActiveDialogue(world, currentTool),
     [world, currentTool],
   );
-  const foremanSmallTalk = useMemo(
-    () => getForemanSmallTalk(world, currentTool),
-    [world, currentTool],
-  );
-  const foremanSuggestedStep = useMemo(
-    () => getForemanSuggestedStep(world),
-    [world],
-  );
   const foremanStageLabel = useMemo(() => getForemanStageLabel(world), [world]);
-  const foremanTone = useMemo(() => getForemanTone(world), [world]);
-  const foremanMemoryReflection = useMemo(
-    () => getForemanMemoryReflection(foremanMemoryEvent, world),
-    [foremanMemoryEvent, world],
-  );
   const foremanStuckAdvice = useMemo(
     () => getForemanStuckAdvice(world),
     [world],
@@ -237,14 +231,6 @@ function App() {
     [world],
   );
   const foremanIdeas = useMemo(() => getForemanIdeas(world), [world]);
-  const foremanWhyThisMatters = useMemo(
-    () => getForemanWhyThisMatters(world),
-    [world],
-  );
-  const foremanWhatComesAfter = useMemo(
-    () => getForemanWhatComesAfter(world),
-    [world],
-  );
   const foremanSuggestedTool = useMemo<ToolMode | null>(() => {
     if (!world.foundation) return "foundation";
     if (world.pillars.length === 0) return "pillar";
@@ -394,6 +380,7 @@ function App() {
                 currentMaterial={currentMaterial}
                 currentFurnitureType={currentFurnitureType}
                 selectedObject={selectedObject}
+                selectedResizeInfo={selectedResizeInfo}
                 statusMessage={statusMessage}
                 canUndo={canUndo}
                 onSetTool={handleSetTool}
@@ -412,6 +399,8 @@ function App() {
                 onSaveWorld={saveWorld}
                 onLoadWorld={loadWorld}
                 onDeleteSelected={deleteSelected}
+                onResizeSelectedPrimary={resizeSelectedPrimary}
+                onResizeSelectedHeight={resizeSelectedHeight}
                 onUndo={() => {
                   if (undo()) {
                     setSelectedObject(null);
@@ -476,6 +465,7 @@ function App() {
             onPlaceSteelBar={placeSteelBar}
             onPlaceRoof={placeRoof}
             onPaint={handlePaint}
+            onPlacementBlocked={setStatusMessage}
             onSelectionChange={handleSelectionChange}
             onViewModeChange={setIsFirstPerson}
             onForemanNearbyChange={handleForemanNearbyChange}

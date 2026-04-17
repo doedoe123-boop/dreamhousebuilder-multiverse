@@ -11,6 +11,11 @@ import {
 import type { World } from "../types/world";
 import { snap } from "../utils/editor";
 import { exportWorldTo3D } from "../utils/scene3d";
+import {
+  resizePillarHeight,
+  resizeWallHeight,
+  resizeWallLength,
+} from "../utils/structureResize";
 import { toSceneUnits, type SelectableUserData } from "./rendererHelpers";
 
 type FoundationBounds = {
@@ -140,13 +145,17 @@ export function buildWorldMeshes(
       color: wallColor,
     });
     const mesh = new THREE.Mesh(geometry, material);
+    const fy = floorY(world.walls[index]?.floor ?? 0);
     mesh.userData = {
       selectable: true,
       kind: "wall",
       id: wall.id,
+      baseY: fy,
     } satisfies SelectableUserData;
-    const fy = floorY(world.walls[index]?.floor ?? 0);
     mesh.position.set(wall.position.x, wall.position.y + fy, wall.position.z);
+    mesh.rotation.y = wall.rotation ?? 0;
+    resizeWallLength(mesh, wall.lengthScale ?? 1);
+    resizeWallHeight(mesh, wall.heightScale ?? 1);
     worldRoot.add(mesh);
   });
 
@@ -177,10 +186,12 @@ export function buildWorldMeshes(
         depthWrite: false,
       }),
     );
+    const fy = floorY(pillar.floor ?? 0);
     mesh.userData = {
       selectable: true,
       kind: "pillar",
       id: pillar.id,
+      baseY: fy,
     } satisfies SelectableUserData;
     hitbox.userData = {
       selectable: true,
@@ -188,13 +199,14 @@ export function buildWorldMeshes(
       id: pillar.id,
       highlightMesh: mesh,
     } satisfies SelectableUserData;
-    const fy = floorY(pillar.floor ?? 0);
     mesh.position.set(
       toSceneUnits(pillar.x + pillar.size / 2),
       pillarHeight / 2 + fy,
       toSceneUnits(pillar.y + pillar.size / 2),
     );
+    resizePillarHeight(mesh, pillar.heightScale ?? 1);
     hitbox.position.copy(mesh.position);
+    hitbox.scale.y = mesh.scale.y;
     worldRoot.add(mesh);
     worldRoot.add(hitbox);
   });

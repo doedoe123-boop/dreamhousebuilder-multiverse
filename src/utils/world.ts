@@ -1,5 +1,7 @@
 import {
   DEFAULT_FOUNDATION,
+  MAX_STRUCTURE_SCALE,
+  MIN_STRUCTURE_SCALE,
   DEFAULT_PILLAR_SIZE,
   DEFAULT_STEELBAR_DIAMETER,
   DEFAULT_WALL_THICKNESS,
@@ -56,6 +58,11 @@ function normalizeStructuralMaterial(
   return value === "wood" || value === "steel" ? value : undefined;
 }
 
+function normalizeScale(value: unknown) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  return Math.min(MAX_STRUCTURE_SCALE, Math.max(MIN_STRUCTURE_SCALE, value));
+}
+
 export function normalizeWallItem(item: Partial<Wall>) {
   const normalized: Wall = {
     id: typeof item.id === "string" ? item.id : createId("wall"),
@@ -67,6 +74,8 @@ export function normalizeWallItem(item: Partial<Wall>) {
       typeof item.thickness === "number"
         ? item.thickness
         : DEFAULT_WALL_THICKNESS,
+    lengthScale: normalizeScale(item.lengthScale) ?? 1,
+    heightScale: normalizeScale(item.heightScale) ?? 1,
     material: normalizeStructuralMaterial(item.material) ?? "wood",
   };
 
@@ -79,6 +88,7 @@ export function normalizePillarItem(item: Partial<Pillar>) {
     x: typeof item.x === "number" ? item.x : 0,
     y: typeof item.y === "number" ? item.y : 0,
     size: typeof item.size === "number" ? item.size : DEFAULT_PILLAR_SIZE,
+    heightScale: normalizeScale(item.heightScale) ?? 1,
     material: normalizeStructuralMaterial(item.material) ?? "wood",
   };
 

@@ -75,13 +75,7 @@ function createFoundationFloor(world: World): Floor3D {
 function createWallObject(wall: Wall): Wall3D {
   const deltaX = wall.x2 - wall.x1;
   const deltaY = wall.y2 - wall.y1;
-  const isHorizontal = Math.abs(deltaX) >= Math.abs(deltaY);
-  const width = isHorizontal
-    ? Math.abs(deltaX) || wall.thickness
-    : wall.thickness;
-  const depth = isHorizontal
-    ? wall.thickness
-    : Math.abs(deltaY) || wall.thickness;
+  const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY) || wall.thickness;
 
   return {
     id: wall.id,
@@ -90,7 +84,10 @@ function createWallObject(wall: Wall): Wall3D {
       DEFAULT_WALL_HEIGHT_PX / 2,
       (wall.y1 + wall.y2) / 2,
     ),
-    dimensions: createDimensions(width, DEFAULT_WALL_HEIGHT_PX, depth),
+    dimensions: createDimensions(length, DEFAULT_WALL_HEIGHT_PX, wall.thickness),
+    rotation: -Math.atan2(deltaY, deltaX),
+    lengthScale: wall.lengthScale ?? 1,
+    heightScale: wall.heightScale ?? 1,
   };
 }
 

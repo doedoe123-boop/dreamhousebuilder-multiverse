@@ -32,7 +32,13 @@ export function createPlacementPreviewManager(
     }
   };
 
-  const updateWallPreview = (sx: number, sy: number, ex: number, ey: number) => {
+  const updateWallPreview = (
+    sx: number,
+    sy: number,
+    ex: number,
+    ey: number,
+    valid = true,
+  ) => {
     clearWallPreview();
     const s = { x: toSceneUnits(sx), z: toSceneUnits(sy) };
     const e = { x: toSceneUnits(ex), z: toSceneUnits(ey) };
@@ -44,7 +50,7 @@ export function createPlacementPreviewManager(
     const wallT = toSceneUnits(DEFAULT_WALL_THICKNESS);
     const geo = new THREE.BoxGeometry(length, wallH, wallT);
     const mat = new THREE.MeshStandardMaterial({
-      color: "#c6842a",
+      color: valid ? "#c6842a" : "#dc2626",
       transparent: true,
       opacity: 0.5,
     });

@@ -1,5 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { INITIAL_WORLD, STORAGE_KEY } from "../constants/editor";
+import {
+  INITIAL_WORLD,
+  STORAGE_KEY,
+  STRUCTURE_SCALE_STEP,
+} from "../constants/editor";
 import { FURNITURE_STYLES } from "../constants/furniture";
 import { PAINT_COLORS } from "../constants/paint";
 import type {
@@ -9,8 +13,14 @@ import type {
   ToolMode,
   World,
 } from "../types/world";
-import { type ForemanMemoryEvent } from "../utils/dialogue";
+import {
+  getForemanFirstWallPlacedGuidance,
+  getForemanFoundationPlacedGuidance,
+  getForemanStartBuildGuidance,
+  type ForemanMemoryEvent,
+} from "../utils/dialogue";
 import { normalizeWorld } from "../utils/world";
+import { clampScale } from "../utils/structureResize";
 import {
   addDoor,
   addFoundation,
@@ -23,6 +33,8 @@ import {
   deleteSelectedObject,
   nudgeSelectedObject,
   paintWorldSurface,
+  resizeSelectedObjectHeight,
+  resizeSelectedObjectPrimary,
 } from "../utils/worldEditorMutations";
 
 const MAX_UNDO_HISTORY = 50;
@@ -44,7 +56,7 @@ export function useWorldEditor() {
   const [foremanMemoryEvent, setForemanMemoryEvent] =
     useState<ForemanMemoryEvent | null>(null);
   const [statusMessage, setStatusMessage] = useState(
-    "Use WASD to walk. Press V for first-person view. H to toggle UI.",
+    getForemanStartBuildGuidance(),
   );
 
   const updateWorld = useCallback(
@@ -124,9 +136,7 @@ export function useWorldEditor() {
       updateWorld((w) => addFoundation(w, x, y));
       setForemanMemoryEvent("placed-foundation");
       setSelectedObject(null);
-      setStatusMessage(
-        "Foundation placed. You can start adding pillars, walls, and the rest of the house.",
-      );
+      setStatusMessage(getForemanFoundationPlacedGuidance());
     },
     [updateWorld],
   );
@@ -143,14 +153,19 @@ export function useWorldEditor() {
 
   const placeWall = useCallback(
     (x1: number, y1: number, x2: number, y2: number) => {
+      const isFirstWall = world.walls.length === 0;
       updateWorld((w) =>
         addWall(w, x1, y1, x2, y2, currentMaterial, currentFloor),
       );
       setForemanMemoryEvent("placed-walls");
       setSelectedObject(null);
-      setStatusMessage("Wall placed. Click to start another or switch tools.");
+      setStatusMessage(
+        isFirstWall
+          ? getForemanFirstWallPlacedGuidance()
+          : "Wall placed. Keep connecting from wall ends or foundation edges.",
+      );
     },
-    [currentFloor, currentMaterial, updateWorld],
+    [currentFloor, currentMaterial, updateWorld, world.walls.length],
   );
 
   const placeDoor = useCallback(
@@ -255,6 +270,86 @@ export function useWorldEditor() {
     [currentPaintColor, updateWorld],
   );
 
+  const selectedResizeInfo = useMemo(() => {
+    if (!selectedObject) return null;
+
+    if (selectedObject.kind === "pillar") {
+      const pillar = world.pillars.find((item) => item.id === selectedObject.id);
+      if (!pillar) return null;
+      return {
+        primaryLabel: "Height",
+        primaryValue: pillar.heightScale ?? 1,
+        secondaryLabel: null,
+        secondaryValue: null,
+      };
+    }
+
+    if (selectedObject.kind === "wall") {
+      const wall = world.walls.find((item) => item.id === selectedObject.id);
+      if (!wall) return null;
+      return {
+        primaryLabel: "Length",
+        primaryValue: wall.lengthScale ?? 1,
+        secondaryLabel: "Height",
+        secondaryValue: wall.heightScale ?? 1,
+      };
+    }
+
+    return null;
+  }, [selectedObject, world.pillars, world.walls]);
+
+  const resizeSelectedPrimary = useCallback(
+    (direction: -1 | 1) => {
+      if (!selectedObject) return;
+      if (selectedObject.kind !== "pillar" && selectedObject.kind !== "wall") return;
+
+      updateWorld((w) =>
+        resizeSelectedObjectPrimary(
+          w,
+          selectedObject,
+          direction * STRUCTURE_SCALE_STEP,
+        ),
+      );
+
+      const currentValue =
+        selectedObject.kind === "pillar"
+          ? world.pillars.find((item) => item.id === selectedObject.id)
+              ?.heightScale ?? 1
+          : world.walls.find((item) => item.id === selectedObject.id)
+              ?.lengthScale ?? 1;
+      const nextValue = currentValue + direction * STRUCTURE_SCALE_STEP;
+      setStatusMessage(
+        `${selectedObject.kind === "pillar" ? "Height" : "Length"}: ${clampScale(nextValue).toFixed(1)}`,
+      );
+    },
+    [selectedObject, setStatusMessage, updateWorld, world.pillars, world.walls],
+  );
+
+  const resizeSelectedHeight = useCallback(
+    (direction: -1 | 1) => {
+      if (!selectedObject) return;
+      if (selectedObject.kind !== "pillar" && selectedObject.kind !== "wall") return;
+
+      updateWorld((w) =>
+        resizeSelectedObjectHeight(
+          w,
+          selectedObject,
+          direction * STRUCTURE_SCALE_STEP,
+        ),
+      );
+
+      const currentValue =
+        selectedObject.kind === "pillar"
+          ? world.pillars.find((item) => item.id === selectedObject.id)
+              ?.heightScale ?? 1
+          : world.walls.find((item) => item.id === selectedObject.id)
+              ?.heightScale ?? 1;
+      const nextValue = currentValue + direction * STRUCTURE_SCALE_STEP;
+      setStatusMessage(`Height: ${clampScale(nextValue).toFixed(1)}`);
+    },
+    [selectedObject, setStatusMessage, updateWorld, world.pillars, world.walls],
+  );
+
   return {
     world,
     canUndo,
@@ -291,5 +386,8 @@ export function useWorldEditor() {
     handleSelectionChange,
     handleSetTool,
     handlePaint,
+    resizeSelectedPrimary,
+    resizeSelectedHeight,
+    selectedResizeInfo,
   };
 }

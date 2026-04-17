@@ -16,6 +16,9 @@ export type Wall3D = {
   id: string;
   position: Vector3;
   dimensions: Dimensions3D;
+  rotation?: number;
+  lengthScale?: number;
+  heightScale?: number;
 };
 
 export type Floor3D = {

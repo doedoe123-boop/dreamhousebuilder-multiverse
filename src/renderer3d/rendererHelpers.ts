@@ -9,6 +9,7 @@ export type SelectableUserData = {
   kind?: SelectableKind;
   id?: string;
   highlightMesh?: THREE.Mesh;
+  baseY?: number;
 };
 
 export function toSceneUnits(value: number) {
