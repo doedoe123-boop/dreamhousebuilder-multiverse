@@ -79,8 +79,8 @@ const DIALOGUE_LINES: DialogueLine[] = [
   {
     id: "foundation-active",
     text: [
-      "Let's start the right way. Click on the land to place the foundation and give the house a proper base.",
-      "Every good house starts with solid footing. Click the land and we'll lay down the foundation.",
+      "This is your plot. Click inside the marked land and place the foundation to start the house properly.",
+      "You've got a good plot to work with. Lay the foundation inside it and we'll build from there.",
     ],
     check: (_w, t) => t === "foundation",
   },
@@ -208,8 +208,8 @@ const DIALOGUE_LINES: DialogueLine[] = [
   {
     id: "pillar-hint",
     text: [
-      "Great, the base is in. Next, place a few pillars so the structure has support points.",
-      "Foundation looks good. Let's start the frame with some pillars.",
+      "Good. That's your base. Let's build within this land and start the frame with pillars.",
+      "Foundation looks good. Keep the structure inside your plot and start with a few pillars.",
     ],
     check: (w) => w.foundation !== null && w.pillars.length === 0,
   },
@@ -225,9 +225,9 @@ const DIALOGUE_LINES: DialogueLine[] = [
   {
     id: "greeting",
     text: [
-      "Welcome to the site, Builder. I'm the foreman here, and I'll be by the cabin whenever you need a hand. Let's begin with the foundation.",
-      "Good to have you here. The land is ready, I'm ready, and your dream house starts with a foundation. Come by the cabin if you want help.",
-      "Take a look around and get comfortable. When you're ready, place the foundation and we'll build this house together. I'll be waiting by the cabin.",
+      "Welcome to the site, Builder. This is your plot. You've got space to build something solid, and it all starts with the foundation.",
+      "Good to have you here. The plot is ready, I'm ready, and your dream house starts when you place the foundation inside the land.",
+      "Take a look around your land and get comfortable. When you're ready, place the foundation and we'll build this house together.",
     ],
     check: () => true,
   },
@@ -498,11 +498,11 @@ export function getForemanMemoryReflection(
 }
 
 export function getForemanStartBuildGuidance(): string {
-  return "Let's begin with the foundation. Give the house a solid base first, then we can frame real walls on top of it.";
+  return "This is your plot. You've got space to build something solid.";
 }
 
 export function getForemanFoundationPlacedGuidance(): string {
-  return "Good. The base is down now. Start your walls from the foundation edge so the structure reads clean and supported.";
+  return "Good. That's your base. Let's build within this land.";
 }
 
 export function getForemanFirstWallPlacedGuidance(): string {

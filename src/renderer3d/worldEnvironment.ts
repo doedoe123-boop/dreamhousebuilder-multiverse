@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { BUILDABLE_LAND_SIZE } from "../constants/editor";
+import { SCENE3D_SCALE } from "../constants/scene3d";
 
 export type WorldEnvironmentHandles = {
   skyDome: THREE.Mesh;
@@ -168,6 +170,8 @@ export function setupWorldEnvironment(
   constructionRing.position.y = -0.02;
   scene.add(constructionRing);
 
+  buildBuildablePlot(scene);
+
   const sun = new THREE.Mesh(
     new THREE.SphereGeometry(8, 18, 18),
     new THREE.MeshBasicMaterial({
@@ -205,6 +209,131 @@ export function setupWorldEnvironment(
   scene.background = null;
 
   return { skyDome };
+}
+
+function buildBuildablePlot(scene: THREE.Scene) {
+  const plotSize = BUILDABLE_LAND_SIZE / SCENE3D_SCALE;
+  const plotHalf = plotSize / 2;
+  const cornerRadius = Math.min(6, plotHalf * 0.16);
+
+  const plotShape = createRoundedRectShape(
+    -plotHalf,
+    -plotHalf,
+    plotSize,
+    plotSize,
+    cornerRadius,
+  );
+  const plotGeometry = new THREE.ShapeGeometry(plotShape, 32);
+  plotGeometry.rotateX(-Math.PI / 2);
+
+  const soilPatch = new THREE.Mesh(
+    plotGeometry,
+    new THREE.MeshStandardMaterial({
+      color: "#b99364",
+      roughness: 1,
+      metalness: 0,
+      transparent: true,
+      opacity: 0.92,
+    }),
+  );
+  soilPatch.position.y = 0.025;
+  scene.add(soilPatch);
+
+  const borderPatch = new THREE.Mesh(
+    new THREE.ShapeGeometry(
+      createRoundedRectShape(
+        -plotHalf - 0.8,
+        -plotHalf - 0.8,
+        plotSize + 1.6,
+        plotSize + 1.6,
+        cornerRadius + 0.6,
+      ),
+      32,
+    ),
+    new THREE.MeshStandardMaterial({
+      color: "#8f6e48",
+      roughness: 1,
+      transparent: true,
+      opacity: 0.35,
+      side: THREE.DoubleSide,
+    }),
+  );
+  borderPatch.geometry.rotateX(-Math.PI / 2);
+  borderPatch.position.y = 0.018;
+  scene.add(borderPatch);
+
+  const postGeometry = new THREE.CylinderGeometry(0.09, 0.12, 1.25, 6);
+  const postMaterial = new THREE.MeshStandardMaterial({
+    color: "#765635",
+    roughness: 0.95,
+  });
+  const ropeMaterial = new THREE.LineBasicMaterial({
+    color: "#cdb88d",
+    transparent: true,
+    opacity: 0.75,
+  });
+
+  const corners = [
+    new THREE.Vector3(-plotHalf, 0.62, -plotHalf),
+    new THREE.Vector3(plotHalf, 0.62, -plotHalf),
+    new THREE.Vector3(plotHalf, 0.62, plotHalf),
+    new THREE.Vector3(-plotHalf, 0.62, plotHalf),
+  ];
+
+  corners.forEach((corner, index) => {
+    const post = new THREE.Mesh(postGeometry, postMaterial.clone());
+    post.position.copy(corner);
+    scene.add(post);
+
+    const nextCorner = corners[(index + 1) % corners.length];
+    const rope = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        corner.clone().setY(0.88),
+        nextCorner.clone().setY(0.88),
+      ]),
+      ropeMaterial,
+    );
+    scene.add(rope);
+  });
+
+  const markerStoneGeometry = new THREE.BoxGeometry(0.55, 0.16, 0.55);
+  const markerStoneMaterial = new THREE.MeshStandardMaterial({
+    color: "#b7a48b",
+    roughness: 1,
+  });
+  [
+    [-plotHalf + 1.4, -plotHalf + 1.4],
+    [plotHalf - 1.4, -plotHalf + 1.4],
+    [plotHalf - 1.4, plotHalf - 1.4],
+    [-plotHalf + 1.4, plotHalf - 1.4],
+  ].forEach(([x, z]) => {
+    const stone = new THREE.Mesh(
+      markerStoneGeometry,
+      markerStoneMaterial.clone(),
+    );
+    stone.position.set(x, 0.08, z);
+    scene.add(stone);
+  });
+}
+
+function createRoundedRectShape(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+) {
+  const shape = new THREE.Shape();
+  shape.moveTo(x + radius, y);
+  shape.lineTo(x + width - radius, y);
+  shape.quadraticCurveTo(x + width, y, x + width, y + radius);
+  shape.lineTo(x + width, y + height - radius);
+  shape.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  shape.lineTo(x + radius, y + height);
+  shape.quadraticCurveTo(x, y + height, x, y + height - radius);
+  shape.lineTo(x, y + radius);
+  shape.quadraticCurveTo(x, y, x + radius, y);
+  return shape;
 }
 
 /* ------------------------------------------------------------------ */

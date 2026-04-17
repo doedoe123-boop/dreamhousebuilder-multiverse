@@ -1,5 +1,8 @@
 import { GRID_SIZE } from "../constants/editor";
 import type { Foundation, Wall, World } from "../types/world";
+import {
+  isRectInsideBuildableLand,
+} from "./buildableLand";
 import { snap } from "./editor";
 
 const WALL_ANCHOR_SNAP_DISTANCE = GRID_SIZE * 1.5;
@@ -186,11 +189,24 @@ export function snapFoundationPlacement(x: number, y: number): PlacementPoint {
   };
 }
 
-export function getFoundationPlacementValidation(world: World): PlacementValidation {
+export function getFoundationPlacementValidation(
+  world: World,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): PlacementValidation {
   if (world.foundation) {
     return {
       valid: false,
       reason: "Foundation already exists. Move into wall building from this base.",
+    };
+  }
+
+  if (!isRectInsideBuildableLand(x, y, width, height)) {
+    return {
+      valid: false,
+      reason: "Outside buildable land",
     };
   }
 

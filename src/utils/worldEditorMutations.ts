@@ -2,13 +2,13 @@ import {
   DEFAULT_DOOR_WIDTH,
   DEFAULT_FOUNDATION_HEIGHT,
   DEFAULT_FOUNDATION_WIDTH,
+  DEFAULT_WALL_THICKNESS,
   MAX_STRUCTURE_SCALE,
   MIN_STRUCTURE_SCALE,
   DEFAULT_PILLAR_SIZE,
   DEFAULT_ROOF_OVERHANG,
   DEFAULT_ROOF_PITCH,
   DEFAULT_STEELBAR_DIAMETER,
-  DEFAULT_WALL_THICKNESS,
   DEFAULT_WINDOW_HEIGHT,
   DEFAULT_WINDOW_WIDTH,
 } from "../constants/editor";
@@ -21,19 +21,14 @@ import type {
   World,
 } from "../types/world";
 import { createId, snap } from "./editor";
-import {
-  getWallPlacementValidation,
-  snapFoundationPlacement,
-} from "./foundationWallPlacement";
 import { clampScale } from "./structureResize";
 
 export function addFoundation(world: World, x: number, y: number): World {
-  const snapped = snapFoundationPlacement(x, y);
   return {
     ...world,
     foundation: {
-      x: snapped.x,
-      y: snapped.y,
+      x,
+      y,
       width: DEFAULT_FOUNDATION_WIDTH,
       height: DEFAULT_FOUNDATION_HEIGHT,
       type: "floor",
@@ -75,15 +70,6 @@ export function addWall(
   material: StructuralMaterial,
   floor: number,
 ): World {
-  const validation = getWallPlacementValidation(
-    world,
-    { x: x1, y: y1 },
-    { x: x2, y: y2 },
-  );
-  if (!validation.valid) {
-    return world;
-  }
-
   return {
     ...world,
     walls: [

@@ -16,6 +16,7 @@ import {
   snapFoundationPlacement,
   type PlacementPoint,
 } from "../utils/foundationWallPlacement";
+import { isPointInsideBuildableLand } from "../utils/buildableLand";
 import {
   applySelectionStyle,
   getSelectionFromMesh,
@@ -168,22 +169,28 @@ export function createWorldInteractionController({
     const point = raycaster.ray.intersectPlane(groundPlane, groundIntersection);
     if (!point) return null;
 
-    if (currentTool !== "foundation") {
-      if (!hasFoundation) return null;
-      if (
-        point.x < foundationBounds.minX ||
-        point.x > foundationBounds.maxX ||
-        point.z < foundationBounds.minZ ||
-        point.z > foundationBounds.maxZ
-      ) {
-        return null;
-      }
-    }
-
-    return {
+    const snappedPoint = {
       x: snap(point.x * SCENE3D_SCALE, GRID_SIZE),
       y: snap(point.z * SCENE3D_SCALE, GRID_SIZE),
     };
+
+    if (currentTool === "foundation") {
+      return isPointInsideBuildableLand(snappedPoint.x, snappedPoint.y)
+        ? snappedPoint
+        : null;
+    }
+
+    if (!hasFoundation) return null;
+    if (
+      point.x < foundationBounds.minX ||
+      point.x > foundationBounds.maxX ||
+      point.z < foundationBounds.minZ ||
+      point.z > foundationBounds.maxZ
+    ) {
+      return null;
+    }
+
+    return snappedPoint;
   };
 
   const getGroundPlacement = (event: PointerEvent) => {
@@ -315,10 +322,28 @@ export function createWorldInteractionController({
       currentTool === "pillar" ||
       currentTool === "furniture"
     ) {
-      const placement =
-        currentTool === "pillar"
-          ? getGroundPlacement(event)
-          : getGroundPoint(event);
+      const placement = (() => {
+        if (currentTool === "pillar") {
+          return getGroundPlacement(event);
+        }
+        if (currentTool === "foundation") {
+          const ground = getGroundPoint(event);
+          if (!ground) return null;
+          const snappedOrigin = snapFoundationPlacement(
+            ground.x - DEFAULT_FOUNDATION_WIDTH / 2,
+            ground.y - DEFAULT_FOUNDATION_HEIGHT / 2,
+          );
+          const validation = getFoundationPlacementValidation(
+            currentWorld,
+            snappedOrigin.x,
+            snappedOrigin.y,
+            DEFAULT_FOUNDATION_WIDTH,
+            DEFAULT_FOUNDATION_HEIGHT,
+          );
+          return validation.valid ? snappedOrigin : null;
+        }
+        return getGroundPoint(event);
+      })();
       updateHoveredMesh(null);
       if (placement) previews.updatePlacementGhost(placement.x, placement.y);
       else previews.clearPlacementGhost();
@@ -394,7 +419,10 @@ export function createWorldInteractionController({
 
     if (currentTool === "pillar") {
       const placement = getGroundPlacement(event);
-      if (!placement) return;
+      if (!placement) {
+        onPlacementBlocked?.("That's outside your land.");
+        return;
+      }
       clearSelection();
       onPlacePillar?.(placement.x, placement.y);
       return;
@@ -403,20 +431,26 @@ export function createWorldInteractionController({
     if (currentTool === "foundation") {
       const ground = getGroundPoint(event);
       if (!ground) {
-        onPlacementBlocked?.("Foundation needs a valid point on the land.");
+        onPlacementBlocked?.("This is outside your buildable land.");
         return;
       }
-      const validation = getFoundationPlacementValidation(currentWorld);
+      const snappedOrigin = snapFoundationPlacement(
+        ground.x - DEFAULT_FOUNDATION_WIDTH / 2,
+        ground.y - DEFAULT_FOUNDATION_HEIGHT / 2,
+      );
+      const validation = getFoundationPlacementValidation(
+        currentWorld,
+        snappedOrigin.x,
+        snappedOrigin.y,
+        DEFAULT_FOUNDATION_WIDTH,
+        DEFAULT_FOUNDATION_HEIGHT,
+      );
       if (!validation.valid) {
         onPlacementBlocked?.(validation.reason ?? "Foundation placement is invalid.");
         return;
       }
       clearSelection();
       previews.clearPlacementGhost();
-      const snappedOrigin = snapFoundationPlacement(
-        ground.x - DEFAULT_FOUNDATION_WIDTH / 2,
-        ground.y - DEFAULT_FOUNDATION_HEIGHT / 2,
-      );
       onPlaceFoundation?.(
         snappedOrigin.x,
         snappedOrigin.y,

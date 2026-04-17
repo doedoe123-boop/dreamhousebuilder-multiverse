@@ -19,16 +19,14 @@ import {
   getForemanStartBuildGuidance,
   type ForemanMemoryEvent,
 } from "../utils/dialogue";
+import { getBuildingState } from "../utils/buildableLand";
 import { normalizeWorld } from "../utils/world";
 import { clampScale } from "../utils/structureResize";
 import {
   addDoor,
-  addFoundation,
   addFurniture,
-  addPillar,
   addRoof,
   addSteelBar,
-  addWall,
   addWindow,
   deleteSelectedObject,
   nudgeSelectedObject,
@@ -36,6 +34,7 @@ import {
   resizeSelectedObjectHeight,
   resizeSelectedObjectPrimary,
 } from "../utils/worldEditorMutations";
+import { validateAndPlace } from "../utils/validateAndPlace";
 
 const MAX_UNDO_HISTORY = 50;
 
@@ -91,7 +90,7 @@ export function useWorldEditor() {
       select:
         "Inspect mode. Click any object to select it. Press Delete to remove.",
       foundation:
-        "Foundation tool. Click the land to place a build base before adding the house structure.",
+        "Foundation tool. Place your base inside the marked plot of land.",
       pillar: `Pillar tool. Click the foundation to place a ${currentMaterial} pillar.`,
       wall: "Wall tool. Click to set start point, click again to finish the wall.",
       door: "Door tool. Click on any wall to place a door.",
@@ -133,30 +132,65 @@ export function useWorldEditor() {
 
   const placeFoundation = useCallback(
     (x: number, y: number) => {
-      updateWorld((w) => addFoundation(w, x, y));
+      const result = validateAndPlace("foundation", { type: "foundation", x, y }, world);
+      if (!result.success) {
+        setStatusMessage(result.reason);
+        return;
+      }
+      updateWorld(result.updatedWorld);
       setForemanMemoryEvent("placed-foundation");
       setSelectedObject(null);
       setStatusMessage(getForemanFoundationPlacedGuidance());
     },
-    [updateWorld],
+    [updateWorld, world],
   );
 
   const placePillar = useCallback(
     (x: number, y: number) => {
-      updateWorld((w) => addPillar(w, x, y, currentMaterial, currentFloor));
+      const result = validateAndPlace(
+        "pillar",
+        {
+          type: "pillar",
+          x,
+          y,
+          material: currentMaterial,
+          floor: currentFloor,
+        },
+        world,
+      );
+      if (!result.success) {
+        setStatusMessage(result.reason);
+        return;
+      }
+      updateWorld(result.updatedWorld);
       setForemanMemoryEvent("placed-pillars");
       setSelectedObject(null);
       setStatusMessage(`Placed ${currentMaterial} pillar.`);
     },
-    [currentFloor, currentMaterial, updateWorld],
+    [currentFloor, currentMaterial, updateWorld, world],
   );
 
   const placeWall = useCallback(
     (x1: number, y1: number, x2: number, y2: number) => {
       const isFirstWall = world.walls.length === 0;
-      updateWorld((w) =>
-        addWall(w, x1, y1, x2, y2, currentMaterial, currentFloor),
+      const result = validateAndPlace(
+        "wall",
+        {
+          type: "wall",
+          x1,
+          y1,
+          x2,
+          y2,
+          material: currentMaterial,
+          floor: currentFloor,
+        },
+        world,
       );
+      if (!result.success) {
+        setStatusMessage(result.reason);
+        return;
+      }
+      updateWorld(result.updatedWorld);
       setForemanMemoryEvent("placed-walls");
       setSelectedObject(null);
       setStatusMessage(
@@ -165,7 +199,7 @@ export function useWorldEditor() {
           : "Wall placed. Keep connecting from wall ends or foundation edges.",
       );
     },
-    [currentFloor, currentMaterial, updateWorld, world.walls.length],
+    [currentFloor, currentMaterial, updateWorld, world],
   );
 
   const placeDoor = useCallback(
@@ -251,15 +285,16 @@ export function useWorldEditor() {
     (tool: ToolMode) => {
       setCurrentTool(tool);
       setSelectedObject(null);
-      if (!world.foundation && tool !== "foundation" && tool !== "select") {
+      const buildingState = getBuildingState(world);
+      if (buildingState === "empty-land" && tool !== "foundation" && tool !== "select") {
         setStatusMessage(
-          "Place a foundation first, then continue with pillars, walls, and the rest of the house.",
+          "This is your plot. Start with the foundation, then build from that base.",
         );
         return;
       }
       setStatusMessage(toolStatusMessages[tool]);
     },
-    [toolStatusMessages, world.foundation],
+    [toolStatusMessages, world],
   );
 
   const handlePaint = useCallback(
