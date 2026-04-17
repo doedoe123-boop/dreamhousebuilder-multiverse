@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { ForemanPanel } from "./components/layout/ForemanPanel";
+import { FirstPersonHud } from "./components/layout/FirstPersonHud";
 import { FloatingToolbar } from "./components/layout/FloatingToolbar";
 import { World3DView } from "./components/three/World3DView";
 import { GRID_SIZE } from "./constants/editor";
@@ -264,113 +265,16 @@ function App() {
         <div
           className={"stage-shell" + (isFirstPerson ? " is-firstperson" : "")}
         >
-          {isFirstPerson && (
-            <div className="fp-key-guide">
-              <div className="fp-key-guide__title">Controls</div>
-              <div className="fp-key-guide__row">
-                <kbd>W A S D</kbd> Move
-              </div>
-              <div className="fp-key-guide__row">
-                <kbd>Mouse</kbd> Look
-              </div>
-              <div className="fp-key-guide__row">
-                <kbd>Click</kbd> Place / Select
-              </div>
-              <div className="fp-key-guide__row">
-                <kbd>Delete</kbd> Remove
-              </div>
-              <div className="fp-key-guide__row">
-                <kbd>Esc</kbd> Exit FP
-              </div>
-              <div className="fp-key-guide__divider" />
-              <div className="fp-key-guide__title">Floor</div>
-              <div className="fp-key-guide__row is-active">
-                <kbd>PgUp/Dn</kbd>{" "}
-                {currentFloor === 0 ? "Ground" : `Floor ${currentFloor}`}
-              </div>
-              <div className="fp-key-guide__divider" />
-              <div className="fp-key-guide__title">Tools</div>
-              <div
-                className={
-                  "fp-key-guide__row" +
-                  (currentTool === "select" ? " is-active" : "")
-                }
-              >
-                <kbd>1</kbd> Inspect
-              </div>
-              <div
-                className={
-                  "fp-key-guide__row" +
-                  (currentTool === "foundation" ? " is-active" : "")
-                }
-              >
-                <kbd>1</kbd> Foundation
-              </div>
-              <div
-                className={
-                  "fp-key-guide__row" +
-                  (currentTool === "select" ? " is-active" : "")
-                }
-              >
-                <kbd>2</kbd> Inspect
-              </div>
-              <div
-                className={
-                  "fp-key-guide__row" +
-                  (currentTool === "pillar" ? " is-active" : "")
-                }
-              >
-                <kbd>3</kbd> Pillar
-              </div>
-              <div
-                className={
-                  "fp-key-guide__row" +
-                  (currentTool === "wall" ? " is-active" : "")
-                }
-              >
-                <kbd>4</kbd> Wall
-              </div>
-              <div
-                className={
-                  "fp-key-guide__row" +
-                  (currentTool === "door" ? " is-active" : "")
-                }
-              >
-                <kbd>5</kbd> Door
-              </div>
-              <div
-                className={
-                  "fp-key-guide__row" +
-                  (currentTool === "window" ? " is-active" : "")
-                }
-              >
-                <kbd>6</kbd> Window
-              </div>
-              <div
-                className={
-                  "fp-key-guide__row" +
-                  (currentTool === "steelbar" ? " is-active" : "")
-                }
-              >
-                <kbd>7</kbd> Steel Bar
-              </div>
-              <div
-                className={
-                  "fp-key-guide__row" +
-                  (currentTool === "roof" ? " is-active" : "")
-                }
-              >
-                <kbd>8</kbd> Roof
-              </div>
-              <div
-                className={
-                  "fp-key-guide__row" +
-                  (currentTool === "furniture" ? " is-active" : "")
-                }
-              >
-                <kbd>9</kbd> Furniture
-              </div>
-            </div>
+          {isFirstPerson && uiVisible && (
+            <FirstPersonHud
+              currentTool={currentTool}
+              currentFloor={currentFloor}
+              selectedObject={selectedObject}
+              selectedResizeInfo={selectedResizeInfo}
+              onDeleteSelected={deleteSelected}
+              onResizeSelectedPrimary={resizeSelectedPrimary}
+              onResizeSelectedHeight={resizeSelectedHeight}
+            />
           )}
           {!isFirstPerson && uiVisible && (
             <>
@@ -445,7 +349,7 @@ function App() {
               );
             }}
           />
-          {!isFirstPerson && !uiVisible && (
+          {!uiVisible && (
             <div className="floating-hint">
               Press <kbd>H</kbd> to show UI
             </div>
